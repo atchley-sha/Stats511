@@ -57,6 +57,7 @@ A boxplot of the data is below.
 ```{r}
 rank$`GDP - per capita` %>% 
 	boxplot(xlab = "GDP per Capita in USD (2004)",
+					ylab = "Number of Countries",
 					horizontal = TRUE)
 ```
 
@@ -74,3 +75,9 @@ rank$`GDP - per capita` %>%
 The breaks already defaulted to $5000, so no redraw is needed.
 
 # 1.18
+
+
+# 1.26
+
+
+# 1.27
