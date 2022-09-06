@@ -10,6 +10,7 @@ output:
     latex_engine: lualatex
 mainfont: Gentium Book Basic
 fonsize: 11pt
+tabstop: 2
 editor_options: 
   chunk_output_type: console
 ---
@@ -22,7 +23,9 @@ knitr::opts_chunk$set(
 )
 library(tidyverse)
 library(EnvStats)
+library(Sleuth3)
 library(knitr)
+library(DescTools)
 ```
 
 
@@ -41,43 +44,205 @@ While at first glance it seems that the Vitamin C should have the same effect wh
 The results, though they can't be generalized to a population due to the non-random sample, are still important because the treatment was randomized. The results therefore indicate that the treatment did have a significant effect on the subjects, and they indicate a need for future studies to determine if this effect can be generalized for a larger population.
 
 # 1.16
-I obtained the data for this problem from [https://www.cia.gov/the-world-factbook/about/archives/download/factbook-2004.zip] in `./rankorder/2004rank.txt`. This data does not seem to match Display 1.11, but it appears to be the data the exercise is pointing to. I am not sure what other data to use, so I will use this.
+I obtained the data for this problem from the `STAT 511 Class materials` BOX folder.
 
 ```{r}
-rank <- read_tsv("HW/HW1/2004rank.txt", skip = 1, n_max = 232) %>% 
-	mutate(`GDP - per capita` = `GDP - per capita` %>% 
-				 	str_replace_all("[^\\d]", "") %>% 
-				 	as.integer()) 
+rank <- Sleuth3::ex0116
 
-head(rank, n = 4)
+head(rank) %>% 
+	kable()
 ```
 
 A boxplot of the data is below.
 
 ```{r}
-rank$`GDP - per capita` %>% 
-	boxplot(xlab = "GDP per Capita in USD (2004)",
-					ylab = "Number of Countries",
-					horizontal = TRUE)
+rank$PerCapitaGDP %>% 
+	boxplot(
+		xlab = "GDP per Capita in USD (2004)",
+		horizontal = TRUE)
 ```
 
-This plot differs from Display 1.11 in several ways. Firstly, as previously mentioned, the data themselves seem to be different. Other than that, there are several presentational differences: Display 1.11 is vertical while this plot is horizontal, the Display names extreme outliers and labels various points of interest in the plot whereas this one does not, and the scale differs by a factor of 1000.
+This plot differs from Display 1.11 in several ways, mostly with presentation: Display 1.11 is vertical while this plot is horizontal, the Display names extreme outliers and labels various points of interest in the plot whereas this one does not, and the scale differs by a factor of 1000.
 
-A histogram of the data is below. The bin width defaulted to `r rank$'GDP - per capita' %>% hist() %>% {.$breaks[2]}`, and the breaks are listed below the plot.
+A histogram of the data is below. The bin width defaulted to `r rank$PerCapitaGDP %>% hist() %>% {.$breaks[2]} %>% format(scientific = FALSE) %>% {paste0("$", .)}`.
 
 ```{r}
-rank$`GDP - per capita` %>% 
-	hist(xlab = "GDP per Capita in USD (2004)",
-			 main = NULL) %>% 
-	{.$breaks}
+rank$PerCapitaGDP %>% 
+	hist(
+		xlab = "GDP per Capita in USD (2004)",
+		ylab = "Number of Countries",
+		main = NULL)
 ```
 
-The breaks already defaulted to $5000, so no redraw is needed.
+Changing the bin width to $5000 gives the following:
+
+```{r}
+rank$PerCapitaGDP %>% 
+	hist(
+		xlab = "GDP per Capita in USD (2004)",
+		ylab = "Number of Countries",
+		breaks = seq(
+			RoundTo(min(.), 5000, "floor"),
+			RoundTo(max(.), 5000, "ceiling"),
+			5000),
+		main = NULL)
+```
+
 
 # 1.18
+```{r}
+Intrinsic <- Sleuth3::case0101 %>% 
+	filter(Treatment == "Intrinsic") %>% 
+	{.$Score}
+Extrinsic <- Sleuth3::case0101 %>% 
+	filter(Treatment == "Extrinsic") %>% 
+	{.$Score} 
 
+obsdiff <- mean(Intrinsic) - mean(Extrinsic)
+
+tibble(
+	"Group" = c("Intrinsic", "Extrinsic"),
+	"Sample Size" = c(length(Intrinsic), length(Extrinsic)),
+	"Mean" = c(mean(Intrinsic), mean(Extrinsic)),
+	"Standard Deviation" = c(sd(Intrinsic), sd(Extrinsic))) %>% 
+	kable()
+```
+
+Running a two-tailed randomization test:
+
+```{r}
+randtest <- twoSamplePermutationTestLocation(
+	Intrinsic,
+	Extrinsic,
+	n.permutations = 1000) 
+```
+
+The test gives 1000 observations of the difference in mean for the randomized dataset. The observed difference in mean was `r obsdiff %>% round(2)`, and `r (numabove <- (randtest$stat.dist > obsdiff) %>% sum())` of these randomized differences were greater than the observed difference:
+
+```{r}
+randtest$stat.dist %>%
+	{.[. > (mean(Intrinsic) - mean(Extrinsic))]} %>% 
+	round(2)
+```
+
+This gives a `r paste0(numabove, "/1000")` probability that the observed difference in means is by chance, or `r numabove/1000`.
 
 # 1.26
+First I loaded the data. Because there were only 3 individuals not associated with the Republican or Democratic party, I removed those data points.
 
+```{r}
+votes <- Sleuth3::ex0126 %>% 
+	filter(Party %in% c("R", "D"))
+
+head(votes) %>% 
+	kable()
+```
+
+To get an idea of the data, I made a boxplot comparing the two parties:
+
+```{r}
+votes %>% 
+	ggplot(aes(x = Party, y = PctPro)) +
+	geom_boxplot() +
+	labs(
+		x = "Party Affiliation",
+		y = "Percent of Votes for Pro-Environment Legislation")
+```
+
+This plot is somewhat striking in itself, but I also did a randomization test:
+
+```{r}
+Rep <- votes %>% 
+	filter(Party == "R") %>% 
+	{.$PctPro}
+Dem <- votes %>% 
+	filter(Party == "D") %>% 
+	{.$PctPro}
+
+randtest <- twoSamplePermutationTestLocation(Rep, Dem)
+```
+
+The observed difference in mean is `r randtest$statistic %>% round(2)`, but none of the randomized differences even come close to that number:
+
+```{r echo=FALSE}
+randtest$stat.dist %>%
+	as.data.frame() %>% 
+	ggplot(aes(x = .)) +
+	geom_boxplot() +
+	geom_vline(xintercept = randtest$statistic) +
+	annotate(
+		"text",
+		x = 60,
+		y = 0.4,
+		label = "Actual difference \n in mean") +
+	annotate(
+		"text",
+		x = 10,
+		y = 0.4,
+		label = "Randomized difference \n in means"
+	) +
+	labs(x = "Mean Difference in Pro-Environment Vote Percentage",
+			 y = NULL) +
+	theme(axis.ticks.y = element_blank(),
+				axis.text.y = element_blank())
+```
+
+It is clear that this difference is not by chance.
+
+\pagebreak
 
 # 1.27
+This problem is nearly identical to the previous one, but with the Senate rather than the House.
+
+```{r echo=FALSE}
+votes <- Sleuth3::ex0127 %>% 
+	filter(Party %in% c("R", "D"))
+
+head(votes) %>% 
+	kable()
+
+
+votes %>% 
+	ggplot(aes(x = Party, y = PctPro)) +
+	geom_boxplot() +
+	labs(
+		x = "Party Affiliation",
+		y = "Percent of Votes for Pro-Environment Legislation")
+```
+
+\pagebreak
+
+```{r echo=FALSE}
+Rep <- votes %>% 
+	filter(Party == "R") %>% 
+	{.$PctPro}
+Dem <- votes %>% 
+	filter(Party == "D") %>% 
+	{.$PctPro}
+
+randtest <- twoSamplePermutationTestLocation(Rep, Dem)
+
+
+randtest$stat.dist %>%
+	as.data.frame() %>% 
+	ggplot(aes(x = .)) +
+	geom_boxplot() +
+	geom_vline(xintercept = randtest$statistic) +
+	annotate(
+		"text",
+		x = 55,
+		y = 0.4,
+		label = "Actual difference \n in mean") +
+	annotate(
+		"text",
+		x = 15,
+		y = 0.4,
+		label = "Randomized difference \n in means"
+	) +
+	labs(x = "Mean Difference in Pro-Environment Vote Percentage",
+			 y = NULL) +
+	theme(axis.ticks.y = element_blank(),
+				axis.text.y = element_blank())
+```
+
+This difference is also clearly not by chance.
