@@ -9,6 +9,7 @@ output:
     fig_caption: yes
     latex_engine: lualatex
 mainfont: Gentium Book Basic
+# mathfont: Gentium Book Basic
 fonsize: 11pt
 tabstop: 2
 editor_options: 
@@ -25,16 +26,67 @@ library(tidyverse)
 library(EnvStats)
 library(Sleuth3)
 library(knitr)
+library(kableExtra)
 library(DescTools)
+library(Sleuth3)
 ```
 
 # 2.3
+False
 
 # 2.6
 
+
 # 2.7
+The $p$-value for the hypothesis that the mean difference is zero must be less than 0.05.
 
 # 2.13
+First I separated the dataset into fish oil and regular oil treatments:
+
+```{r}
+fishoil <- ex0112 %>% 
+	filter(Diet == "FishOil")
+regoil <- ex0112 %>% 
+	filter(Diet == "RegularOil")
+```
+
+Computing the sample averages and standard deviations:
+
+```{r}
+oilcomp <- tibble(
+	Diet = c("Fish Oil", "Regular Oil"),
+	n = c(length(fishoil$BP), length(regoil$BP)),
+	`Sample average` = c(mean(fishoil$BP), mean(regoil$BP)),
+	`Sample stdev` = c(sd(fishoil$BP), sd(regoil$BP))
+)
+
+oilcomp %>% 
+	kbl(booktabs = TRUE, digits = 2, position = "h") %>% 
+	kable_styling()
+```
+
+```{r, echo=FALSE}
+nf <- oilcomp$n[1] %>% round()
+nr <- oilcomp$n[2] %>% round()
+
+mf <- oilcomp$`Sample average`[1] %>% 
+	round(2)
+mr <- oilcomp$`Sample average`[2] %>% 
+	round(2)
+
+sdf <- oilcomp$`Sample stdev`[1] %>% 
+	round(2)
+sdr <- oilcomp$`Sample stdev`[2] %>% 
+	round(2)
+```
+
+\newpage
+
+The pooled standard deviation is given by: 
+\[
+\sqrt{\frac{(`r nf`-1)*`r sdf` + (`r nr`-1)*`r sdr`}{`r nf`+`r nr`-2}},
+\]
+which is equal to `r (psd <- sqrt( ((nf-1)*sdf+(nr-1)*sdr) / (nf+nr-2) ) %>% round(2))`, and the pooled standard error of the difference in means is $`r psd` * \sqrt{\frac{1}{`r nf`} + \frac{1}{`r nr`}}$,  which equals `r (pse <- (psd*sqrt(1/nf + 1/nr)) %>% round(2))`. There are $`r nf`+`r nr`- 2 = `r (df <- nf + nr - 2)`$ degrees of freedom associated with this estimate, and the 97.5th percentile of a _t_-distribution with `r df` degrees of freedom is `r qt(0.975, df) %>% round(2)`.
 
 # 2.18
 
