@@ -105,7 +105,7 @@ tibble(
 	"Sample Size" = c(length(Intrinsic), length(Extrinsic)),
 	"Mean" = c(mean(Intrinsic), mean(Extrinsic)),
 	"Standard Deviation" = c(sd(Intrinsic), sd(Extrinsic))) %>% 
-	kable()
+	kable(digits = 2)
 ```
 
 Running a two-tailed randomization test:
@@ -135,7 +135,7 @@ votes <- Sleuth3::ex0126 %>%
 	filter(Party %in% c("R", "D"))
 
 head(votes) %>% 
-	kable()
+			kable()
 ```
 
 To get an idea of the data, I made a boxplot comparing the two parties:
