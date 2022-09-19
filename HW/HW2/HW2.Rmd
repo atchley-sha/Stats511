@@ -18,7 +18,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-	echo = TRUE,
+	echo = FALSE,
 	message = FALSE,
 	warning = FALSE
 )
@@ -35,7 +35,7 @@ library(Sleuth3)
 False
 
 # 2.6
-
+One problem with the hypothesis is that a difference in means is never _truly_ equal to zero. While it may be very close, it won't be exact, and so this is an impossible hypothesis to test. Another problem is that "The difference in means equals zero" is nearly always the null hypothesis, with the alternative hypothesis positing that there _is_ a difference in the means. So taking the stated hypothesis as the alternative hypothesis would again be impossible to test.
 
 # 2.7
 The $p$-value for the hypothesis that the mean difference is zero must be less than 0.05.
@@ -43,7 +43,7 @@ The $p$-value for the hypothesis that the mean difference is zero must be less t
 # 2.13
 First I separated the dataset into fish oil and regular oil treatments:
 
-```{r}
+```{r, echo=TRUE}
 fishoil <- ex0112 %>% 
 	filter(Diet == "FishOil")
 regoil <- ex0112 %>% 
@@ -52,14 +52,16 @@ regoil <- ex0112 %>%
 
 Computing the sample averages and standard deviations:
 
-```{r}
+```{r, echo=TRUE}
 oilcomp <- tibble(
 	Diet = c("Fish Oil", "Regular Oil"),
 	n = c(length(fishoil$BP), length(regoil$BP)),
 	`Sample average` = c(mean(fishoil$BP), mean(regoil$BP)),
 	`Sample stdev` = c(sd(fishoil$BP), sd(regoil$BP))
 )
+```
 
+```{r}
 oilcomp %>% 
 	kbl(booktabs = TRUE, digits = 2, position = "h") %>% 
 	kable_styling()
@@ -102,14 +104,126 @@ which is equal to `r psd %>% round(2)`, and the pooled standard error of the dif
 A 95% confidence interval is given by $\mu \pm t_{df}(0.975)\times SE$, which in this case gives $`r diff` \pm `r pse*pct975 %>% round(2)`$. The _t_-score is `r tstat %>% round(2)` and the one-sided _p_-value is `r pval %>% round(4)`.
 
 # 2.18
-First I separated the data into 1976 and 1978 finches:
+A boxplot showing the finch beak depth by year:
 
 ```{r}
-f6 <- ex0218 %>% 
-	filter(Year == 1976)
-f8 <- ex0218 %>% 
-	filter(Year == 1978)
+ex0218 %>% 
+	mutate(Year = as.factor(Year)) %>% 
+	ggplot(aes(x = Year, y = Depth)) +
+	geom_boxplot() +
+	theme_minimal() +
+	theme(panel.grid.major.x = element_blank()) +
+	ylab("Beak Depth")
 ```
+
+```{r}
+
+beaktest <- t.test(
+	ex0218 %>% 
+		filter(Year == 1978) %>% 
+		{.$Depth},
+	ex0218 %>% 
+		filter(Year == 1976) %>% 
+		{.$Depth},
+	var.equal = TRUE,
+	alternative = "greater"
+)
+
+beakdiff <- (beaktest$estimate[1] - beaktest$estimate[2]) %>%
+	round(3)
+beakconf <- beaktest$conf.int[1] %>%
+	round(3)
+```
+
+The hypothesis is that the 1978 mean beak depth is greater than the 1976 mean beak depth. I tested this with a two-sample _t_-test, and the resulting _t_-statistic and _p_-value are `r beaktest$statistic %>% round(2)` and `r beaktest$p.value %>% round(7) %>% format(scientific = FALSE)`, respectively. The estimate and 95% confidence interval are given by $`r beakdiff`$ and $[`r beakconf`,\infty)$.
+
+One reason to question the independent measurement assumption is that there is no guarantee that the finches are different between 1976 and 1978. They could be the same or offspring of each other, and so the genetics would be the same or similar.
 
 
 # 2.22
+
+```{r}
+smart <- ex0222 %>% 
+	pivot_longer(cols = -Gender,
+							 names_to = "Type",
+							 values_to = "Score")
+```
+
+A boxplot of the test scores:
+
+```{r}
+smart %>% 
+	ggplot(aes(x = Type, y = Score, fill = Gender)) +
+	geom_boxplot()
+
+smarttest <- t.test(
+	smart %>%
+		filter(Gender == "male") %>%
+		{.$Score},
+	smart %>%
+		filter(Gender == "female") %>%
+		{.$Score},
+	var.equal = TRUE)
+```
+
+I ran a _t_-test on the statistic `mean(male) - mean(female)` for each test and the composite score, and the results are below:
+
+```{r}
+make_column <- function(type){
+	data <- smart %>% 
+		filter(Type == type)
+	
+	male <- data %>% 
+		filter(Gender == "male")
+	female <- data %>% 
+		filter(Gender == "female")
+	
+	result <- t.test(
+		male$Score,
+		female$Score,
+		var.equal = TRUE)
+	
+	c(
+		"Diff Means" = result$estimate[1] - result$estimate[2],
+		"t-statistic" = result$statistic,
+		"p-value" = result$p.value,
+		"95% Conf Interval" = paste0("(",
+																 result$conf.int[1] %>% 
+																 	round(3),
+																 ", ",
+																 result$conf.int[2] %>% 
+																 	round(3),
+																 ")"))
+}
+```
+
+```{r}
+comparison <- tibble(
+	"Stat" = c("Diff Means",
+					"t-statistic",
+					"p-value",
+					"95% Conf Interval"),
+	"Arith" = make_column("Arith"),
+	"Math" = make_column("Math"),
+	"Parag" = make_column("Parag"),
+	"Word" = make_column("Word"),
+	"Composite AFQT" = make_column("AFQT")
+	
+)
+```
+
+```{r}
+comparison %>% 
+	pivot_longer(-"Stat") %>% 
+	pivot_wider(names_from = "Stat") %>% 
+	rename(" " = name) %>% 
+	mutate(across(
+		c(-" ", -last_col()),
+		~ as.numeric(.x))) %>% 
+	kbl(digits = 3, booktabs = TRUE) %>% 
+	kable_styling(latex_options = c("HOLD_position"))
+```
+
+The `Arith` and `Math` scores present strong evidence that males on average perform better in these categories, while `Parag` shows females performing better. `Word` shows no evidence that the performance differs between genders. The claim that males perform better in the composite `AFQT` score is weakly supported by these results, but they are inconclusive.
+
+
