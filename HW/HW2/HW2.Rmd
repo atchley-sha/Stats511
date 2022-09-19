@@ -78,16 +78,37 @@ sdf <- oilcomp$`Sample stdev`[1] %>%
 	round(2)
 sdr <- oilcomp$`Sample stdev`[2] %>% 
 	round(2)
-```
 
-\newpage
+diff = mf-mr
+
+psd <- sqrt( ((nf-1)*sdf+(nr-1)*sdr) / (nf+nr-2))
+pse <- (psd*sqrt(1/nf + 1/nr))
+df <- (nf + nr - 2) %>% round()
+
+conf <- 5
+ttest <- t.test(fishoil$BP, regoil$BP,
+								var.equal = TRUE, alternative = "greater")
+tstat <- ttest$statistic
+pval <- ttest$p.value
+```
 
 The pooled standard deviation is given by: 
 \[
 \sqrt{\frac{(`r nf`-1)*`r sdf` + (`r nr`-1)*`r sdr`}{`r nf`+`r nr`-2}},
 \]
-which is equal to `r (psd <- sqrt( ((nf-1)*sdf+(nr-1)*sdr) / (nf+nr-2) ) %>% round(2))`, and the pooled standard error of the difference in means is $`r psd` * \sqrt{\frac{1}{`r nf`} + \frac{1}{`r nr`}}$,  which equals `r (pse <- (psd*sqrt(1/nf + 1/nr)) %>% round(2))`. There are $`r nf`+`r nr`- 2 = `r (df <- nf + nr - 2)`$ degrees of freedom associated with this estimate, and the 97.5th percentile of a _t_-distribution with `r df` degrees of freedom is `r qt(0.975, df) %>% round(2)`.
+which is equal to `r psd %>% round(2)`, and the pooled standard error of the difference in means is $`r psd` * \sqrt{\frac{1}{`r nf`} + \frac{1}{`r nr`}}$,  which equals `r pse %>% round(2)`. There are $`r nf`+`r nr`- 2 = `r df`$ degrees of freedom associated with this estimate, and the 97.5th percentile of a _t_-distribution with `r df` degrees of freedom is `r qt(0.975, df) %>% round(2)`.
+
+A 95% confidence interval is given by $\mu \pm something$, which in this case gives $`r diff` \pm conf$. The _t_-score is `r tstat %>% round(2)` and the one-sided _p_-value is `r pval %>% round(4)`.
 
 # 2.18
+First I separated the data into 1976 and 1978 finches:
+
+```{r}
+f6 <- ex0218 %>% 
+	filter(Year == 1976)
+f8 <- ex0218 %>% 
+	filter(Year == 1978)
+```
+
 
 # 2.22
