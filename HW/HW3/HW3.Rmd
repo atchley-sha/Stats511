@@ -16,6 +16,20 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(Sleuth3)
+library(ggeasy)
+library(tidyverse)
+library(ggthemes)
+library(scales)
+```
+
 # 3.3
 If the crew were aware of whether seeding was conducted, they may have---consciously or not---changed their behaviors in a way that would influence the results.
 
@@ -34,3 +48,111 @@ The difference in means is _not_ resistant, as a dramatic change in one observat
 The average of the ranks for the trauma group minus the average of the ranks for the non-trauma group _is_ resistant, as a dramatic change in one observation would not change the rankings, and therefore the difference of their averages, very much if at all.
 
 # 3.26
+The log-transformed data from the Agent Orange study (adding 0.1 to all values since the dataset contains zeros) gives:
+
+```{r, fig.pos="h"}
+logdata <- case0302 %>% 
+	mutate(add = Dioxin + 0.1,
+				 log = log(add))
+
+logdata %>% 
+	ggplot(aes(y = Veteran, x = log)) +
+	geom_boxplot() +
+	theme_gdocs() +
+	labs(x = "log(Dioxin Level)")
+```
+
+```{r}
+splitdata <- logdata %>% 
+	split(.$Veteran)
+
+test <- t.test(splitdata$Vietnam$log, splitdata$Other$log)
+
+p <- test$p.value %>% round(3)
+low <- test$conf.int[1] %>% round(3)
+high <- test$conf.int[2] %>% round(3)
+
+lowexp <- exp(low) %>% round(3)
+highexp <- exp(high) %>% round(3)
+```
+
+Running a _t_-test on these transformed samples gives a _p_-value of $`r p`$ and a 95% confidence interval of $`r low` \less \mu_2 - \mu_1 \less `r high`$ for the log-transformed data. Back-transforming gives us that the median dioxin of the Vietnam veterans is between $e^{`r low`} = `r lowexp`$ and $e^{`r high`} = `r highexp`$ times as much as that of the other veterans.
+
+# 3.28
+A boxplot of the data:
+
+```{r, fig.pos="h"}
+sparrows <- ex0221 %>% 
+	split(ex0221$Status)
+
+ex0221 %>% 
+	ggplot(aes(y = Status, x = Humerus)) +
+	geom_boxplot() +
+	theme_gdocs() +
+	labs(x = "Humerus Length", y = "")
+```
+
+```{r}
+perish_min <- min(sparrows$Perished$Humerus)
+
+no_small <- ex0221 %>% 
+	filter(!(Status == "Perished" & Humerus == perish_min))
+no_small <- no_small %>% 
+	split(no_small$Status)
+
+test_all <- t.test(sparrows$Survived$Humerus, sparrows$Perished$Humerus)
+test_nosmall <- t.test(no_small$Survived$Humerus, no_small$Perished$Humerus)
+
+p_all <- test_all$p.value %>% round(3)
+p_nosmall <- test_nosmall$p.value %>% round(3)
+```
+
+A _p_-value for the difference in humerus lengths with all observations is `r p_all`, and without the smallest observation in the perished group (`r perish_min`), the _p_-value is `r p_nosmall`. The _p_-value changes a fair bit (by `r p_nosmall - p_all`), but even with all the observations included, there is not strong evidence that the difference in means is not equal to zero. If there were a more drastic difference such that one of these tests _did_ show strong evidence of a difference in means, then the removed observation should be double-checked for accuracy.
+
+# 3.30
+```{r}
+income <- ex0330 %>% 
+	select(-Subject) %>% 
+	mutate(Educ = as.factor(Educ))
+```
+
+A boxplot of the data:
+
+```{r}
+income %>% 
+	ggplot(aes(y = Educ, x = Income2005)) +
+	geom_boxplot() +
+	theme_gdocs() +
+	labs(x = "Income", y = "Years of Education") +
+	scale_x_continuous(labels = label_comma())
+```
+
+This data is highly skewed in the positive direction, so we look at a log transform as well:
+
+```{r}
+incomelog <- income %>% 
+	mutate(log = log(Income2005))
+
+incomelog %>% 
+	ggplot(aes(y = Educ, x = log)) +
+	geom_boxplot() +
+	theme_gdocs() +
+	labs(x = "log(Income)", y = "Years of Education") +
+	scale_x_continuous(labels = label_comma())
+
+split_income <- incomelog %>% 
+	split(incomelog$Educ)
+```
+
+```{r}
+test <- t.test(split_income$`16`$log, split_income$`12`$log)
+
+p <- test$p.value %>% round(3)
+low <- test$conf.int[1] %>% round(3)
+high <- test$conf.int[2] %>% round(3)
+diff <- (test$estimate[1] - test$estimate[2]) %>% round(3)
+delta <- ((high - low)/2) %>% round(3)
+```
+
+Running a _t_-test on this transformed data gives a _p_-value of `r p`, with a 95% confidence interval of `r diff` $\pm$ `r delta`. Restating in terms of the original data, the median income for those with 16 years of education is between $e^{`r low`} = `r exp(low) %>% round(2)`$ and $e^{`r high`} = `r exp(high) %>% round(2)`$ times as much as those with 12 years of education.
+
