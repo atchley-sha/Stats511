@@ -1,0 +1,158 @@
+---
+title: Exam 1
+subtitle: Take-home portion
+author: Hayden Atchley
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc: false
+    number_sections: false
+mainfont: Gentium Book Basic
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+library(kableExtra)
+library(ggthemes)
+library(ggeasy)
+```
+
+# 1
+First we load in the data:
+
+```{r, echo=TRUE}
+frogs <- readxl::read_xlsx("Exams/Exam 1/2022 F E1 511 problem 1.xlsx")
+```
+
+In order to get a quick idea of the data, we make a boxplot, shown in Figure \@ref(fig:frog-box).
+
+```{r frog-box}
+#| fig.cap="Original boxplot of pre-cancerous wart count by frog type",
+#| fig.height=4,
+
+frogs %>% 
+	ggplot(aes(x = Count, y = Type, fill = Type)) +
+	geom_boxplot() +
+	theme_pander() +
+	easy_remove_legend(fill) +
+	labs(x = "No. of Pre-Cancerous Warts", y = "Type of Frog")
+	
+```
+
+There is an odd observation of almost 600 pre-cancerous warts on a spotted frog. This is around 10 times greater than any other observation. It is clearly a mistake, as given the size of frogs (and warts) this would be impossible. We remove this observation and create a new boxplot (Figure \@ref(fig:frog-fix-box)).
+
+```{r}
+frogs2 <- frogs %>% 
+	filter(Count != max(Count))
+```
+
+```{r frog-fix-box}
+#| fig.cap="Fixed boxplot of pre-cancerous wart count by frog type",
+#| fig.height=4
+
+frogs2 %>% 
+	ggplot(aes(x = Count, y = Type, fill = Type)) +
+	geom_boxplot() +
+	theme_pander() +
+	easy_remove_legend(fill) +
+	labs(x = "No. of Pre-Cancerous Warts", y = "Type of Frog")
+```
+
+The hypothesis is that the spotted frogs on average have more pre-cancerous warts than the leopard frogs. From Figure \@ref(fig:frog-fix-box) this seems like a reasonable claim, but in order to be sure we run a two-sample _t_-test on the data. This test is chosen since we are testing a difference in means, with the null hypothesis being that the difference in mean between the two types of frog is zero. We also assume that the two variances are equal and use a pooled standard deviation.
+
+```{r, echo=TRUE}
+frog_test <- t.test(Count ~ Type, frogs2, var.equal = TRUE)
+```
+
+```{r frog-test}
+frog_test %>% 
+	broom::tidy() %>% 
+		select(-c("estimate1", "estimate2", "conf.low":"alternative")) %>% 
+		relocate(estimate, parameter) %>%
+		`names<-`(c(
+			"Difference in Sample Means \\\\
+			(Leopard $\\minus$ Spotted)",
+			"Degrees of Freedom",
+			"t-Statistic",
+			"p-Value")) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "t-Test Results for Pre-Cancerous Wart Count
+			on Leopard and Spotted Frogs") %>% 
+	kable_styling()
+```
+
+Table \@ref(tab:frog-test) shows the results of this test. The _p_-value is quite large, which indicates that there is no evidence that the alternative hypothesis (that there is a difference in wart count between the frog types) is correct.
+
+
+# 2
+Loading in the data:
+
+```{r, echo=TRUE}
+tires <- readxl::read_xlsx("Exams/Exam 1/2022 F E1 511 problem 2.xlsx")
+```
+
+Each car had two tires from both brands, but were not driven identically. Because of the paired nature of the data, a paired _t_-test is useful. A plot of the data is given in Figure \@ref(fig:tires-plot), and a boxplot of the difference in tire wear in Figure \@ref(fig:tires-diff-box).
+
+```{r tires-plot}
+#| fig.cap="Plot of tire tread wear by brand and car.",
+#| fig.height=4
+
+tires %>% 
+	mutate(Car = str_remove(Car, "\\w") %>% 
+				 	as.integer()) %>% 
+	pivot_longer(cols = -Car) %>% 
+	ggplot(aes(x = Car, y = value, fill = name)) +
+	geom_col(position = "dodge") +
+	theme_pander() +
+	theme(panel.grid.major.x = element_blank(),
+				panel.grid.minor.x = element_blank()) +
+	scale_x_continuous(breaks = 1:20, limits = c(0.5, 20.5)) +
+	easy_legend_at("bottom") +
+	labs(x = "Car", y = "Tread Wear (1/1000 inch)",
+			 fill = "Tire Brand")
+```
+
+```{r tires-diff-box}
+#| fig.cap="Difference in tire wear (Flatt - Firetire), 1/1000 inch",
+#| fig.height=2
+
+tires %>% 
+	mutate(diff = Flatt - Firetire) %>% 
+	ggplot(aes(x = diff)) + 
+	geom_boxplot() +
+	theme_pander() +
+	easy_remove_y_axis() +
+	theme(panel.grid.major.y = element_blank(),
+				panel.grid.minor.y = element_blank()) +
+	labs(x = element_blank())
+```
+
+Based on this boxplot, it appears that Firetire tires wear more quickly than Flatt tires. But to see if this difference is significant, we run a paired _t_-test, the results of which are summarized in Table \@ref(tab:tires-test).
+
+```{r, echo=FALSE}
+tires_test <- t.test(tires$Flatt, tires$Firetire, paired = TRUE)
+```
+
+```{r, tires-test}
+tires_test %>% 
+	broom::tidy() %>% 
+	select(-c(conf.low:alternative)) %>% 
+	`names<-`(c(
+		"Estimate \\\\ (Flatt $\\minus$ Firetire)",
+		"t-Statistic",
+		"p-Value",
+		"Degrees of Freedom"
+	)) %>% 
+	relocate(`Degrees of Freedom`, .after = 1) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "Paired t-Test Results for Tire Wear Comparison") %>% 
+	kable_styling()
+```
+
+Based on this _p_-value, it is hard to conclude that there is a difference in tire wear. The evidence is quite weak.
