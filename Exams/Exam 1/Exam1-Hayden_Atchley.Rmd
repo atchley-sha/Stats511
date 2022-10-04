@@ -87,7 +87,7 @@ frog_test %>%
 	kable_styling()
 ```
 
-Table \@ref(tab:frog-test) shows the results of this test. The _p_-value is quite large, which indicates that there is no evidence that the alternative hypothesis (that there is a difference in wart count between the frog types) is correct.
+Table \@ref(tab:frog-test) shows the results of this test. The _p_-value is quite large, which indicates that there is no evidence that the alternative hypothesis (that there is a difference in wart count between the frog types) is correct. Because we are not accepting the alternative hypothesis, there are no inferences to be made.
 
 
 # 2
@@ -262,7 +262,7 @@ mice %>%
 	kable_styling(latex_options = "hold_position")
 ```
 
-With the outliers greater than `r cutoff` removed, the results are now significant at an $\alpha = 0.05$ level. Considering this and that the log-transformed data also showed a significant difference, I'm inclined to interpret the extreme outliers as erroneous. However, a more thorough investigation into the cause and validity of these outliers would be wise.
+With the outliers greater than `r cutoff` removed, the results are now significant at the $\alpha = 0.05$ level. Considering this and that the log-transformed data also showed a significant difference, I'm inclined to interpret the extreme outliers as erroneous (or at least non-representative), and conclude that there is a difference. However, a more thorough investigation into the cause and validity of these outliers would be wise.
 
 
 # 4
@@ -282,6 +282,7 @@ teaching %>%
 	ggplot() +
 	geom_density(aes(x = Score, color = `Training Method`)) +
 	theme_pander() +
+	easy_legend_at("bottom") +
 	labs(x = "Test Score", y = "Density")
 ```
 
@@ -306,6 +307,6 @@ These results show strong evidence that there is a difference in scores based on
 # 5
 My three T/F questions for Chapter 1 of the book are:
 
-- Q#1
-- Q#2
-- Q#3
+- A group of volunteers are randomly assigned either a treatment or a placebo, and there is a significant difference in the outcomes between the two groups. We can conclude that the treatment caused the difference in outcomes. (T/F)
+- A group of volunteers are randomly assigned either a treatment or a placebo, and there is a significant difference in the outcomes between the two groups. Therefore, we can conclude that the treatment will be effective for the population at large. (T/F)
+- The results of an analysis with the null hypothesis $\mu_2 \minus \mu_1 \neq 0$ gives a _p_-value of 0.024. This means that there is a 2.4% chance the true difference in means is equal to 0. (T/F)
