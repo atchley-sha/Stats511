@@ -1,0 +1,29 @@
+---
+title: HW #4
+subtitle: |
+  4.3, 4.10, 4.17, 4.19, 4.25, 4.27, 4.31
+author: Hayden Atchley
+date: `r Sys.Date()`
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc: false
+    number_sections: false
+mainfont: Gentium Book Basic
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(tidyverse)
+```
+
+# 4.3
+Removing the zeros from the dataset would completely alter the data and therefore change the results (especially when there are so many zeros). Either a small value should be added to all the observations if a log transformation is still desired, or a different method should be used.
+
+# 4.10
+The cutoff of $p=0.05$ is essentially arbitrary; there's no intrinsic reason that a 5% chance of something happening is significant while a 6% chance is not. In this case, the two _p_-values are so similar that they tell the same story: there is around a 5% chance that these results would occur due to pure randomness if the null hypothesis were true. As such, it's better to report and discuss the _p_-value itself rather than a simple "yes/no" of significance.
