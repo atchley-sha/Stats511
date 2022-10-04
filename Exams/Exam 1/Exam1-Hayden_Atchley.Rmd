@@ -135,7 +135,7 @@ tires %>%
 
 Based on this boxplot, it appears that Firetire tires wear more quickly than Flatt tires. But to see if this difference is significant, we run a paired _t_-test, the results of which are summarized in Table \@ref(tab:tires-test).
 
-```{r, echo=FALSE}
+```{r}
 tires_test <- t.test(tires$Flatt, tires$Firetire, paired = TRUE)
 ```
 
@@ -156,3 +156,76 @@ tires_test %>%
 ```
 
 Based on this _p_-value, it is hard to conclude that there is a difference in tire wear. The evidence is quite weak.
+
+
+# 3
+We are testing the hypothesis that the weight gain of mice is affected by the difference in diet. A boxplot of the data is given in Figure \@ref(fig:mice-box).
+
+```{r}
+mice <- readxl::read_xlsx("Exams/Exam 1/2022 F E1 511 problem 3.xlsx")
+
+cutoff <- 100
+```
+
+```{r mice-box}
+#| fig.cap="Boxplot of weight gain in mice by diet.",
+#| fig.height=3
+
+mice %>% 
+	ggplot() +
+	geom_boxplot(aes(x = Gain, y = Diet, fill = Diet)) +
+	easy_remove_legend("fill") +
+	theme_pander() +
+	labs(x = "Weight Gain")
+```
+
+These data are quite skewed, and the group with the higher average has the larger spread. There are also several outliers (some quite extreme) with large values. This seems a good candidate for a log transformation. To be sure, running a _t_-test with the unaltered data gives the results found in Table \@ref(tab:mice-test), which are inconclusive.
+
+```{r}
+mice_test <- t.test(Gain ~ Diet, mice, var.equal = TRUE)
+```
+
+```{r mice-test}
+mice_test %>% 
+	broom::tidy() %>% 
+	select(-c(conf.low:alternative, estimate1:estimate2)) %>% 
+	`names<-`(c(
+		"Estimate \\\\ (Diet A $\\minus$ Diet B)",
+		"t-Statistic",
+		"p-Value",
+		"Degrees of Freedom"
+	)) %>% 
+	relocate(`Degrees of Freedom`, .after = 1) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "Paired t-Test Results for Mice Diet Comparison") %>% 
+	kable_styling(latex_options = c("hold_position"))
+```
+
+
+```{r}
+mice_log <- mice %>% 
+	mutate(log = log(Gain))
+
+mice_log_test <- t.test(log ~ Diet, mice_log)
+
+ratio_low <- exp(mice_test_log$conf.int[1]) %>% round(2)
+ratio_high <- exp(mice_test_log$conf.int[2]) %>% round(2)
+```
+
+A boxplot of the log-transformed data is given in Figure \@ref(fig:mice-box-log), and the associated _t_-test results are given in Table \@ref(tab:mice-test-log). These results show strong evidence of significance, and back-transforming the data gives us 95% confidence that the ratio $\frac{median_{DietA}}{median_{DietB}}$ is between `r ratio_low` and `r ratio_high`.
+
+However, an analysis of the difference in _means_ was asked for, and so we return to the original, unaltered data and see what effect the outliers have. I removed all values greater than `r cutoff`, as the observations greater than this are quite extreme outliers (the outliers less than `r cutoff` are more believable). 
+
+# 4
+
+```{r}
+teaching <- readxl::read_xlsx("Exams/Exam 1/2022 F E1 511 problem 4.xlsx")
+```
+
+```{r}
+teaching %>% 
+	ggplot() +
+	geom_density(aes(x = Score, color = `Training Method`)) +
+	geom_boxplot(aes(x = Score, y = `Training Method`))
+```
+
