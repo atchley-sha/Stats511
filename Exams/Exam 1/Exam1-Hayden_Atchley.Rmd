@@ -197,8 +197,8 @@ mice_test %>%
 	)) %>% 
 	relocate(`Degrees of Freedom`, .after = 1) %>% 
 	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
-			caption = "Paired t-Test Results for Mice Diet Comparison") %>% 
-	kable_styling(latex_options = c("hold_position"))
+			caption = "t-Test Results for Mice Diet Comparison") %>% 
+	kable_styling(latex_options = "hold_position")
 ```
 
 
@@ -206,7 +206,7 @@ mice_test %>%
 mice_log <- mice %>% 
 	mutate(log = log(Gain))
 
-mice_log_test <- t.test(log ~ Diet, mice_log)
+mice_test_log <- t.test(log ~ Diet, mice_log)
 
 ratio_low <- exp(mice_test_log$conf.int[1]) %>% round(2)
 ratio_high <- exp(mice_test_log$conf.int[2]) %>% round(2)
@@ -214,18 +214,98 @@ ratio_high <- exp(mice_test_log$conf.int[2]) %>% round(2)
 
 A boxplot of the log-transformed data is given in Figure \@ref(fig:mice-box-log), and the associated _t_-test results are given in Table \@ref(tab:mice-test-log). These results show strong evidence of significance, and back-transforming the data gives us 95% confidence that the ratio $\frac{median_{DietA}}{median_{DietB}}$ is between `r ratio_low` and `r ratio_high`.
 
-However, an analysis of the difference in _means_ was asked for, and so we return to the original, unaltered data and see what effect the outliers have. I removed all values greater than `r cutoff`, as the observations greater than this are quite extreme outliers (the outliers less than `r cutoff` are more believable). 
+```{r mice-box-log}
+#| fig.cap="Boxplot of log of weight gain in mice by diet.",
+#| fig.height=3
+
+mice_log %>% 
+	ggplot() +
+	geom_boxplot(aes(x = log, y = Diet, fill = Diet)) +
+	easy_remove_legend("fill") +
+	theme_pander() +
+	labs(x = "log(Weight Gain)")
+```
+
+```{r mice-test-log}
+mice_test_log %>% 
+	broom::tidy() %>% 
+	select(-c(conf.low:alternative, estimate1:estimate2)) %>% 
+	`names<-`(c(
+		"Estimate \\\\ (log(Diet A) $\\minus$ log(Diet B))",
+		"t-Statistic",
+		"p-Value",
+		"Degrees of Freedom"
+	)) %>% 
+	relocate(`Degrees of Freedom`, .after = 1) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "t-Test Results for Log Mice Diet Comparison") %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+However, an analysis of the difference in _means_ was asked for, and so we return to the original, unaltered data and see what effect the outliers have. I removed all values greater than `r cutoff`, as the observations greater than this are quite extreme outliers (the outliers less than `r cutoff` are more believable). The results of the _t_-test with these outliers removed are given in Table \@ref(tab:mice-test-no-outliers).
+
+```{r mice-test-no-outliers}
+mice %>% 
+	filter(Gain < cutoff) %>% 
+	{t.test(Gain ~ Diet, .)} %>% 
+	broom::tidy() %>% 
+	select(-c(conf.low:alternative, estimate1:estimate2)) %>% 
+	`names<-`(c(
+		"Estimate \\\\ (Diet A $\\minus$ Diet B)",
+		"t-Statistic",
+		"p-Value",
+		"Degrees of Freedom"
+	)) %>% 
+	relocate(`Degrees of Freedom`, .after = 1) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "Results for Mice Diet Comparison with no Outliers") %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+With the outliers greater than `r cutoff` removed, the results are now significant at an $\alpha = 0.05$ level. Considering this and that the log-transformed data also showed a significant difference, I'm inclined to interpret the extreme outliers as erroneous. However, a more thorough investigation into the cause and validity of these outliers would be wise.
+
 
 # 4
+The data on the two different teaching methods is very nicely distributed, as can be seen in Figure \@ref(fig:teaching-density). As such, the standard _t_-test should be an effective tool. The results of the _t_-test can be seen in Table \@ref(tab:teaching-test).
 
 ```{r}
 teaching <- readxl::read_xlsx("Exams/Exam 1/2022 F E1 511 problem 4.xlsx")
+
+teaching_test <- t.test(Score ~ `Training Method`, teaching)
 ```
 
-```{r}
+```{r teaching-density}
+#| fig.cap="Kernel density plot of scores based on training method.",
+#| fig.height=4
+
 teaching %>% 
 	ggplot() +
 	geom_density(aes(x = Score, color = `Training Method`)) +
-	geom_boxplot(aes(x = Score, y = `Training Method`))
+	theme_pander() +
+	labs(x = "Test Score", y = "Density")
 ```
 
+```{r teaching-test}
+teaching_test %>% 
+	broom::tidy() %>% 
+	select(-c(conf.low:alternative, estimate1:estimate2)) %>% 
+	`names<-`(c(
+		"Estimate \\\\ (Method A $\\minus$ Method B)",
+		"t-Statistic",
+		"p-Value",
+		"Degrees of Freedom"
+	)) %>% 
+	relocate(`Degrees of Freedom`, .after = 1) %>% 
+	kbl(digits = 2, escape = FALSE, booktabs = TRUE,
+			caption = "Comparison of Training Methods (t-test)")
+```
+
+These results show strong evidence that there is a difference in scores based on the training method, and that Method B yields higher scores than Method A.
+
+
+# 5
+My three T/F questions for Chapter 1 of the book are:
+
+- Q#1
+- Q#2
+- Q#3
