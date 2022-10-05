@@ -3,7 +3,7 @@ title: HW #4
 subtitle: |
   4.3, 4.10, 4.17, 4.19, 4.25, 4.27, 4.31
 author: Hayden Atchley
-date: `r Sys.Date()`
+date: "`r Sys.Date()`"
 output:
   bookdown::pdf_document2:
     latex_engine: xelatex
@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 )
 
 library(tidyverse)
+library(kableExtra)
 ```
 
 # 4.3
@@ -27,3 +28,141 @@ Removing the zeros from the dataset would completely alter the data and therefor
 
 # 4.10
 The cutoff of $p=0.05$ is essentially arbitrary; there's no intrinsic reason that a 5% chance of something happening is significant while a 6% chance is not. In this case, the two _p_-values are so similar that they tell the same story: there is around a 5% chance that these results would occur due to pure randomness if the null hypothesis were true. As such, it's better to report and discuss the _p_-value itself rather than a simple "yes/no" of significance.
+
+# 4.17
+The number of O-ring incidents based on temperature is given as follows:
+
+```{r}
+lowtemp <- c(1,1,1,2)
+hightemp <- c(rep(0,17),1,1,3)
+
+viz <- tribble(
+	~"Launch temperature", ~"Number of incidents",
+	"Below 65F", "1 1 1 2",
+	"Above 65F", "1 1 3 0 (x17)")
+
+viz %>% 
+	kbl(booktabs = TRUE) %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+```{r}
+o_test <- t.test(lowtemp, hightemp, var.equal = TRUE)
+
+o_stat <- o_test$statistic %>% round(3)
+
+o_pval <- ((316+95+10)/10626) %>% round(3)
+```
+
+A _t_-test of these values (assuming equal variance) yields a _t_-statistic of `r o_stat`. According to the following table:
+
+```{r}
+tibble(
+	"# of arrangements" = c(
+		2380, 3400, 2040, 1530, 855, 316, 95, 10),
+	"t-statistic" = c(
+		-1.188, -0.463, 0.231, 0.939, 1.716, 2.643, 3.888, 5.952)
+) %>% 
+	kbl(booktabs = TRUE, linesep = "") %>% 
+	kable_styling(latex_options = c("hold_position", "striped"))
+```
+
+there are $316 + 95 + 10 = `r 316+95+10`$ arrangements with _t_-statistics of `r o_stat` or greater, out of a total $10,626$ arrangements. This gives a one-sided _p_-value of $\frac{`r 316+95+10`}{10,626} = `r o_pval`$.
+
+
+# 4.19
+I will answer parts **(b)** and **(c)** first. The `wilcox.test` function in R allows for computing either an exact _p_-value or one based on the normal approximation. If using the approximate value, continuity correction is optional. In my case, I will compute the approximate _p_-value with continuity correction.
+
+```{r}
+#| sparrow-box,
+#| fig.cap="Humerus length of sparrows.",
+#| fig.height=4
+
+boxplot(Humerus ~ Status, Sleuth3::ex0221, horizontal = TRUE)
+```
+
+```{r}
+sparrow_rank <- wilcox.test(Humerus ~ Status, Sleuth3::ex0221,
+														exact = FALSE, correct = TRUE)
+sparrow_t <- t.test(Humerus ~ Status, Sleuth3::ex0221,
+										var.equal = TRUE)
+sparrow_nosmall <- t.test(Humerus ~ Status,
+													Sleuth3::ex0221 %>% 
+														filter(Humerus != min(Humerus)),
+													var.equal = TRUE)
+```
+
+A boxplot of the data is given in Figure \@ref(fig:sparrow-box). A table comparing the _p_-values of the rank-sum test, the two-sample _t_-test, and the _t_-test with the smallest observation removed is shown below:
+
+```{r}
+tibble(
+	" " = "p-value",
+	"Rank-sum" = round(sparrow_rank$p.value, 3),
+	"t-test" = round(sparrow_t$p.value, 3),
+	"t-test (w/o smallest observation)" = round(sparrow_nosmall$p.value, 3)
+) %>% 
+	kbl(booktabs = TRUE, escape = FALSE, align = "c") %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+The _p_-value of the rank-sum test is nearly identical to that of the _t_-test with the smallest outlier removed. When there are outliers such as this, the rank-sum test deals with them handily, and the _t_-test requires a decision regarding any outliers. Both can give helpful results, but the _t_-test requires more verification of the data.
+
+
+# 4.25
+A boxplot of the data:
+
+```{r}
+#| fig.pos="h",
+#| fig.height=4
+
+boxplot(Lifetime ~ Group, Sleuth3::ex0211, horizontal = TRUE)
+```
+
+```{r}
+pig_test <- t.test(Lifetime ~ Group, Sleuth3::ex0211)
+
+pig_p <- pig_test$p.value %>% round(3)
+pig_low <- pig_test$conf.int[1] %>% round(3)
+pig_high <- pig_test$conf.int[2] %>% round(3)
+```
+
+The Welch _t_-test gives a two-sided _p_-value of $`r pig_p`$, and a confidence interval of $`r pig_low` < \mu_{\text{bacilli}} \minus \mu_{\text{control}} < `r pig_high`$. The additive model is not ideal, as there is only one treatment, and the groups are delineated based on whether or not they received the treatment.
+
+# 4.27
+A histogram of the differences in hippocampus volumes:
+
+```{r}
+#| fig.pos="h",
+#| fig.height=4
+
+case <- Sleuth3::case0202 %>% 
+	mutate(diff = Unaffected - Affected)
+
+case %>% 
+	{hist(.$diff, main = NULL, xlab = "Unaffected - Affected")}
+```
+
+And of the differences of the log-transformed data:
+
+```{r}
+caselog <- Sleuth3::case0202 %>% 
+	log() %>% 
+	mutate(diff = Unaffected - Affected)
+```
+
+```{r}
+#| fig.pos="h",
+#| fig.height=4
+
+caselog %>% 
+	{hist(.$diff, main = NULL, xlab = "log(Unaffected) - log(Affected)")}
+```
+
+```{r}
+vol_test <- wilcox.test(caselog$diff)
+vol_un_test <- wilcox.test(case$diff)
+```
+
+The signed-rank test of the difference in log values gives a _p_-value of `r vol_test$p.value %>% round(3)`, and the untransformed data gives `r vol_un_test$p.value %>% round(3)`.
+
+Based on the histograms, neither distribution is particularly normal, though the log-transformed data has a less normal distribution than the untransformed data. The rank test would therefore be more useful on the log-transformed data.
