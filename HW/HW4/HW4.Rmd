@@ -6,7 +6,7 @@ author: Hayden Atchley
 date: "`r Sys.Date()`"
 output:
   bookdown::pdf_document2:
-    latex_engine: xelatex
+    latex_engine: lualatex
     toc: false
     number_sections: false
 mainfont: Gentium Book Basic
@@ -21,6 +21,8 @@ knitr::opts_chunk$set(
 
 library(tidyverse)
 library(kableExtra)
+library(ggeasy)
+library(ggthemes)
 ```
 
 # 4.3
@@ -166,3 +168,47 @@ vol_un_test <- wilcox.test(case$diff)
 The signed-rank test of the difference in log values gives a _p_-value of `r vol_test$p.value %>% round(3)`, and the untransformed data gives `r vol_un_test$p.value %>% round(3)`.
 
 Based on the histograms, neither distribution is particularly normal, though the log-transformed data has a less normal distribution than the untransformed data. The rank test would therefore be more useful on the log-transformed data.
+
+
+# 4.31
+```{r}
+breast <- Sleuth3::ex0431
+```
+
+A boxplot of the data is given in Figure \@ref(fig:breast-box). It is important to note that 3 patients were still alive at the time this data was collected, so their survival time was recorded at 122 months, but the actual value is an unknown amount larger than this. A kernel density plot is provided in Figure \@ref(fig:breast-density).
+
+```{r}
+#| breast-box,
+#| fig.height=3,
+#| fig.pos="h",
+#| fig.cap="Boxplot of breast cancer patients' lifespan (months after start of study)."
+
+breast %>% 
+	ggplot(aes(x = Survival, y = Group, fill = Group)) +
+	geom_boxplot() +
+	theme_pander() +
+	easy_remove_legend("fill")
+```
+
+```{r}
+#| breast-density,
+#| fig.height=3,
+#| fig.pos="h",
+#| fig.cap="Density plot of breast cancer patients' lifespan (months after start of study)."
+
+breast %>% 
+	ggplot(aes(x = Survival, color = Group)) +
+	geom_density() +
+	theme_pander() +
+	easy_legend_at("bottom")
+```
+
+```{r}
+breast_test <- wilcox.test(Survival ~ Group, breast, exact = FALSE)
+
+breast_p <- breast_test$p.value %>% round(3)
+```
+
+The density plot shows that these data are not at all normally distributed, and so a _t_-test will likely perform quite poorly. Due to this as well as the fact that there are censored observations, instead a rank-sum test is used. This test gives a _p_-value of `r breast_p`, which offers no real evidence that there is a difference between the groups. This is a bit surprising based on the boxplots, but the "therapy" group had a huge spread (in fact, the distribution was nearly flat), so it's entirely possible that the high-value observations were just due to random chance.
+
+Since no conclusions are being drawn, no inferences need to be made.
