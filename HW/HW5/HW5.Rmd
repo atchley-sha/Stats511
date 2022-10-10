@@ -1,0 +1,44 @@
+---
+title: "HW #5"
+subtitle: "5.4, 5.10, 5.16, 5.17, 5.18, 5.23"
+author: Hayden Atchley
+date: "`r Sys.Date()`"
+mainfont: Gentium Book Basic
+output:
+  bookdown::pdf_document2:
+    number_sections: false
+    toc: false
+    latex_engine: lualatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+options(
+	knitr.kable.NA = ''
+)
+
+pacman::p_load(Sleuth3, tidyverse, kableExtra, broom)
+```
+
+# 5.4
+
+
+# 5.10
+
+
+# 5.16
+
+```{r}
+aov(Percent ~ Judge, case0502) %>%
+	tidy() %>% 
+	kbl(booktabs = TRUE, digits = c(0,0,1,2,3,8)) %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+# 5.17
+
+
