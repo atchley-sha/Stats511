@@ -41,4 +41,65 @@ aov(Percent ~ Judge, case0502) %>%
 
 # 5.17
 
+```{r}
+windf <- 24
+winssq <- 35088
+totdf <- 31
+totssq <- 70907
+
+betdf <- totdf - windf
+betssq <- totssq - winssq
+
+numgroups <- betdf + 1
+```
+
+```{r}
+tibble(
+	Source = c("Between Groups", "Within Groups"),
+	DF = c(betdf, windf),
+	SumSq = c(betssq, winssq),
+	MeanSq = SumSq/DF,
+	Fstat = c(MeanSq[1]/MeanSq[2], NA),
+	Pval = c(pf(Fstat[1], DF[1], DF[2], lower.tail = FALSE), NA)
+) %>% 
+	kbl(booktabs = TRUE, digits = c(0,0,0,0,2,4)) %>% 
+	kable_styling(latex_options = "hold_position")
+```
+
+There were `r numgroups` groups, and there is evidence at the $\alpha = 0.01$ level that the group means are _not_ identical.
+
+# 5.18
+
+```{r}
+means.treat <- ex0518 %>% 
+	group_by(Treatment) %>% 
+	summarise(mean.treat = mean(Protein))
+
+means.treatday <- ex0518 %>% 
+	group_by(Treatment, Day) %>% 
+	summarise(mean.treatday = mean(Protein))
+
+resid_table <- ex0518 %>%
+	left_join(means.treat) %>% 
+	left_join(means.treatday) %>% 
+	mutate(
+		resid.treat = Protein - mean.treat,
+		resid.treatday = Protein - mean.treatday
+	)
+```
+
+## a
+
+```{r}
+means.treat %>% 
+	kbl(booktabs = TRUE) %>% 
+	kable_styling()
+```
+
+```{r}
+resid_table %>% 
+	ggplot(aes(x = mean.treat, y = resid.treat)) +
+	geom_point()
+```
+
 
