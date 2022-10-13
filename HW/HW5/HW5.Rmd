@@ -26,9 +26,11 @@ pacman::p_load(Sleuth3, tidyverse, kableExtra, broom, ggthemes)
 
 # 5.4
 
+A treatment usually is associated with a change in the mean but not the variance, so the best estimate of $\sigma$ is $s_p$ from all the groups.
 
 # 5.10
 
+Fewer degrees of freedom, especially in the denominator, result in distributions where larger _F_-statistics are more likely.
 
 # 5.16
 
@@ -134,7 +136,7 @@ means.treatday %>%
 ```
 
 ```{r}
-model_treatday %>% 
+aov(Protein ~ TrtDayGroup, ex0518) %>% 
 	tidy() %>%
 	kbl(booktabs = TRUE, digits = c(0,0,1,2,3,5)) %>% 
 	kable_styling(latex_options = "HOLD_position")
@@ -147,24 +149,13 @@ From this we can conclude that the means of all 10 groups are _not_ equal.
 We compare the two models as follows:
 
 ```{r}
-tidy_treat <- model_treat %>% tidy()
-tidy_treatday <- model_treatday %>% tidy()
-
-tribble(
-	~Model, ~df, ~sumsq,
-	"w/o Day (6 means)", tidy_treat$df[1], tidy_treat$sumsq[1],
-	"With Day (10 means)", sum(tidy_treatday$df[1:2]), sum(tidy_treatday$sumsq[1:2])
-) %>% 
-	mutate(
-		meansq = sumsq / df,
-		fstat = c(meansq[1] / meansq[2], NA),
-		pvalue = c(pf(fstat[1], df[1], df[2], lower.tail = FALSE), NA)
-	) %>% 
-	kbl(booktabs = TRUE, digits = c(0,0,1,1,3,3)) %>% 
+anova(model_treat, model_treatday) %>%
+	tidy() %>% 
+	kbl(booktabs = TRUE, digits = c(0,0,1,0,1,3,3)) %>% 
 	kable_styling(latex_options = "HOLD_position")
 ```
 
-This gives no evidence that the means between days are different.
+This gives strong evidence that the means between days are different.
 
 
 
@@ -176,7 +167,7 @@ A boxplot of the data is given below:
 
 ```{r}
 #| fig.pos="h",
-#| fig.height=3
+#| fig.height=2.8
 
 ex0523 %>% 
 	mutate(Bone = str_remove(Bone, "Bone"),
