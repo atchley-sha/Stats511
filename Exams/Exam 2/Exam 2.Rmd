@@ -1,0 +1,112 @@
+---
+title: "Exam 2"
+author: "Hayden Atchley"
+date: "`r Sys.Date()`"
+mainfont: Gentium Book Basic
+output:
+  bookdown::pdf_document2:
+    number_sections: false
+    toc: false
+    latex_engine: lualatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+options(
+	knitr.kable.NA = ''
+)
+
+pacman::p_load(Sleuth3, tidyverse, kableExtra, broom, ggthemes, readxl)
+```
+
+# 1
+
+The first thing to do is to look at a scatterplot of the data:
+
+```{r}
+#| force-scatter,
+#| fig.height=2.5,
+#| fig.pos="H"
+
+force <- read_excel("2022 F E2 Question 1.xlsx")
+
+force %>% 
+	ggplot(aes(x = length, y = force)) +
+	geom_point() +
+	theme_pander() +
+	labs(x = "Length (cm)", y = "Force (lbs)")
+```
+
+A log transformation of the _y_-axis results in a more linear relationship:
+
+```{r}
+#| force-scatter-log,
+#| fig.height=2.5,
+#| fig.pos="H"
+
+forcelog <- force %>% 
+	mutate(force_log = log(force))
+
+forcelog %>% 
+	ggplot(aes(x = length, y = force_log)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander() +
+	labs(x = "Length (cm)", y = "log(Force (lbs))")
+```
+
+And a table describing the regression model:
+
+```{r}
+#| force-log-table
+
+forcelog_model <- lm(force_log ~ length, forcelog)
+
+rsq <- forcelog_model %>% 
+	summary() %>% 
+	{.$r.squared} %>% 
+	round(3)
+
+int <- forcelog_model$coefficients[1] %>% round(2)
+slope <- forcelog_model$coefficients[2] %>% round(2)
+expint <- exp(forcelog_model$coefficients[1]) %>% round(2)
+
+forcelog_model %>% 
+	tidy() %>% 
+	kbl(digits = c(0,2,3,2,4), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+This gives overwhelming evidence of a relationship between the claw length and force applied. With an R-squared value of `r rsq`, the model also explains a significant amount of the variance in the data. To re-state the model, we found:
+
+\begin{align*}
+\log(force) &= `r int` + `r slope` \times length \\
+force &= e^{`r int` + `r slope` \times length} \\
+	&= `r expint` \times e^{`r slope` \times length}.
+\end{align*}
+
+It is important to note that this is an observational experiment, and so while we can conclude that there is an association between claw length and force applied, causality cannot be inferred. The data were obtained from crabs "captured one day", which is likely a random sample selection (though it is impossible to know for sure without more details regarding the capturing process). Therefore, the results can reasonably be generalized to the crab population in the area.
+
+# 2
+
+First we look at a plot of the data:
+
+```{r}
+#| salary-plot,
+#| fig.height=3,
+#| fig.pos="H"
+
+salary <- read_excel("2022 F E2 Question 2.xlsx")
+
+salary %>% 
+	ggplot(aes(x = Salary/1000, y = University, fill = University)) +
+	# geom_violin() +
+	geom_boxplot() +
+	theme_pander() +
+	guides(fill = "none")
+```
+
