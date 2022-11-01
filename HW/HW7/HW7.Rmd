@@ -44,7 +44,7 @@ ex0327 %>%
 	theme_pander()
 ```
 
-This fit is not a very good one at all. Very little of the actual data is within the 95% confidence band predicted, and the band is very wide for much of the data range. Some sort of transformation or other model is likely to produce a better result.
+<!-- This fit is not a very good one at all. Very little of the actual data is within the 95% confidence band predicted, and the band is very wide for much of the data range. Some sort of transformation or other model is likely to produce a better result. -->
 
 # 7.25
 
