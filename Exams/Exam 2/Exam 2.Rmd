@@ -14,13 +14,15 @@ output:
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
-	warning = FALSE
+	warning = FALSE,
+	fig.height = 3,
+	fig.pos = "H"
 )
 options(
 	knitr.kable.NA = ''
 )
 
-pacman::p_load(Sleuth3, tidyverse, kableExtra, broom, ggthemes, readxl)
+pacman::p_load(Sleuth3, tidyverse, kableExtra, broom, ggthemes, readxl, DescTools)
 ```
 
 # 1
@@ -30,7 +32,6 @@ The first thing to do is to look at a scatterplot of the data:
 ```{r}
 #| force-scatter,
 #| fig.height=2.5,
-#| fig.pos="H"
 
 force <- read_excel("2022 F E2 Question 1.xlsx")
 
@@ -46,7 +47,6 @@ A log transformation of the _y_-axis results in a more linear relationship:
 ```{r}
 #| force-scatter-log,
 #| fig.height=2.5,
-#| fig.pos="H"
 
 forcelog <- force %>% 
 	mutate(force_log = log(force))
@@ -68,7 +68,7 @@ forcelog_model <- lm(force_log ~ length, forcelog)
 
 rsq <- forcelog_model %>% 
 	summary() %>% 
-	{.$r.squared} %>% 
+	{.$adj.r.squared} %>% 
 	round(3)
 
 int <- forcelog_model$coefficients[1] %>% round(2)
@@ -78,6 +78,7 @@ expint <- exp(forcelog_model$coefficients[1]) %>% round(2)
 forcelog_model %>% 
 	tidy() %>% 
 	kbl(digits = c(0,2,3,2,4), booktabs = TRUE) %>% 
+	footnote(paste0("R$^2$ = ", rsq), general_title = "", escape = FALSE) %>% 
 	kable_styling(latex_options = "HOLD_position")
 ```
 
@@ -96,9 +97,7 @@ It is important to note that this is an observational experiment, and so while w
 First we look at a plot of the data:
 
 ```{r}
-#| salary-plot,
-#| fig.height=3,
-#| fig.pos="H"
+#| salary-plot
 
 salary <- read_excel("2022 F E2 Question 2.xlsx")
 
@@ -113,9 +112,7 @@ salary %>%
 This data could be log-transformed, as incomes are not usually linearly distributed, and several outliers are often present (as can be seen above, especially with the Harvard data). A log-transformed plot is presented below:
 
 ```{r}
-#| salary-plot-log,
-#| fig.height=3,
-#| fig.pos="H"
+#| salary-plot-log
 
 salary %>% 
 	ggplot(aes(x = log(Salary), y = University, fill = University)) +
@@ -127,4 +124,131 @@ salary %>%
 
 Running a one-way ANOVA on the untransformed data gives a _p_-value of 0.055, which is suggestive of a difference, but inconclusive. An ANOVA test on the log-transformed data gives a _p_-value of 0.0047, which offers convincing evidence of a difference.
 
+```{r}
+salary_model <- aov(Salary ~ University, salary)
+salary_log_model <- aov(log(Salary) ~ University, salary)
+```
 
+
+We run a Tukey-Kramer analysis on both the untransformed and log-transformed data. The untransformed analysis is given first:
+
+```{r}
+#| salary-tukey
+
+TukeyHSD(salary_model) %>% 
+	tidy() %>% 
+	select(-term, -null.value) %>% 
+	kbl(digits = c(0,0,0,0,3), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+And the analysis of the log-transformed data:
+
+```{r}
+#| salary-log-tukey
+
+TukeyHSD(salary_log_model) %>% 
+	tidy() %>% 
+	select(-term, -null.value) %>% 
+	kbl(digits = 3, booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+In both of these analyses, there is evidence of a difference between Slippery Rock and Harvard salaries, though the evidence is moderate on the original data and much more convincing on the log-transformed data. In any case, it is reasonable to conclude that there is a difference between these two groups.
+
+This result can be generalized to all business graduates from these universities (at least over the time interval that the samples were taken from), as the sample selection was randomized. However, this is an observational study, so while we conclude there is a difference in salaries between Slippery Rock graduates and Harvard graduates, we cannot infer causality.
+
+# 3
+
+```{r}
+cars <- read_excel("2022 F E2 Question 3.xlsx")
+```
+
+A scatterplot of the data shows that there may be a roughly linear relationship between the number of cars in line and the wait time:
+
+```{r}
+cars %>% 
+	ggplot(aes(x = Cars, y = Time)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander() +
+	scale_x_continuous(breaks = seq(0,10,2))
+```
+
+An analysis of the linear model:
+
+```{r}
+time_model <- lm(Time ~ Cars, cars)
+
+r_sq <- time_model %>% 
+	summary() %>% 
+	{.$adj.r.squared} %>% 
+	round(3)
+
+time_model %>% 
+	tidy() %>% 
+	kbl(digits = c(0,2,2,2,3), booktabs = TRUE) %>% 
+	footnote(paste0("R$^2$ = ", r_sq), general_title = "", escape = FALSE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+## a
+
+The predicted mean wait time with two cars in line is as follows:
+
+```{r}
+predict(time_model, as_tibble(2) %>% `colnames<-`("Cars"), interval = "conf") %>% 
+	kbl(digits = 1, booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+Note that the interval given is the 95% confidence interval for the _mean_ wait time, not the 95% prediction interval.
+
+## b
+
+The predicted wait time with 20 cars in line is `r predict(time_model, as_tibble(20) %>% 'colnames<-'("Cars")) %>% round(1)` minutes. 
+
+## c
+
+The value of 20 cars in line is far outside the range of observed data, and while the relationship is approximately linear within the data range, there is no guarantee that that relationship holds outside the data range.
+
+\newpage
+
+# 4
+
+A plot of the data:
+
+```{r}
+teaching <- read_excel("2022 F E2 Question 4.xlsx")
+
+teaching %>% 
+	ggplot(aes(x = score, y = method, fill = method)) +
+	geom_violin() +
+	geom_boxplot(width = 0.3) +
+	theme_pander() +
+	guides(fill = 'none')
+```
+
+Since we are only interested in comparing the conventional method to the other groups individually, we use the Dunnett test:
+
+```{r}
+DunnettTest(score ~ method, teaching)$conventional %>% 
+	kbl(digits = c(1,2,2,3), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+This gives moderate evidence that method B produces lower scores than the conventional method, and strong evidence that method C produces higher scores. There is no evidence that method A differs from the conventional method.
+
+It is unclear how the students were assigned to a teaching method; if it was randomized then we can conclude that the teaching method is responsible for the score difference, but if it was not randomized then no causality can be inferred. It is also unclear how the students were selected; if they were a random sample from a larger group then the results can be generalized to that group, but if not then we cannot generalize.
+
+# 5
+
+- In performing comparisons between multiple groups, it is good practice to run a _t_-test for each pair and use those results in the analysis. (T/F)
+
+- The _______ model is obtained by imposing the restrictions of the null hypothesis.
+
+- The difference between the observed value and the estimated mean is called a(n):
+  a. _F_-value
+  b. Residual
+  c. Standard error
+  d. Sum of squares
