@@ -103,10 +103,28 @@ First we look at a plot of the data:
 salary <- read_excel("2022 F E2 Question 2.xlsx")
 
 salary %>% 
-	ggplot(aes(x = Salary/1000, y = University, fill = University)) +
-	# geom_violin() +
-	geom_boxplot() +
+	ggplot(aes(x = Salary, y = University, fill = University)) +
+	geom_violin() +
+	geom_boxplot(width = 0.3) +
 	theme_pander() +
 	guides(fill = "none")
 ```
+
+This data could be log-transformed, as incomes are not usually linearly distributed, and several outliers are often present (as can be seen above, especially with the Harvard data). A log-transformed plot is presented below:
+
+```{r}
+#| salary-plot-log,
+#| fig.height=3,
+#| fig.pos="H"
+
+salary %>% 
+	ggplot(aes(x = log(Salary), y = University, fill = University)) +
+	geom_violin() +
+	geom_boxplot(width = 0.3) +
+	theme_pander() +
+	guides(fill = "none")
+```
+
+Running a one-way ANOVA on the untransformed data gives a _p_-value of 0.055, which is suggestive of a difference, but inconclusive. An ANOVA test on the log-transformed data gives a _p_-value of 0.0047, which offers convincing evidence of a difference.
+
 
