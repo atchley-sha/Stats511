@@ -1,0 +1,73 @@
+---
+title: "HW #7"
+subtitle: "7.2, 7.9, 7.15, 7.25, 7.29"
+date: "`r Sys.Date()`"
+author: "Hayden Atchley"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    latex_engine: lualatex
+    number_sections: false
+mainfont: Gentium Book Basic
+---
+
+```{r setup}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom)
+```
+
+
+# 7.2
+
+Improved distance measurements would decrease measurement error, resulting in smaller variation and therefore more precise estimates of the regression coefficients.
+
+# 7.9
+
+The intercept of 5kg does _not_ imply that males of height 0 weigh 5kg on average. This does not render the model meaningless, however, as the model is fitted on a narrow band of height and weight data compared to all theoretical real-number values. A height of 0 is well outside this band, and the model is not designed to predict this value.
+
+# 7.15
+
+```{r}
+#| pollen-removal,
+#| fig.pos="H"
+
+ex0327 %>% 
+	filter(BeeType == "Queen") %>% 
+	ggplot(aes(x = DurationOfVisit, y = PollenRemoved)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander()
+```
+
+<!-- This fit is not a very good one at all. Very little of the actual data is within the 95% confidence band predicted, and the band is very wide for much of the data range. Some sort of transformation or other model is likely to produce a better result. -->
+
+# 7.25
+
+Fitting the data to a linear model with an intercept term gives:
+
+```{r}
+#| big-bang-intercept
+
+ex0725 %>% 
+	{lm(Velocity ~ Distance, .)} %>% 
+	tidy() %>% 
+	knitr::kable()
+```
+
+This does not give evidence that the intercept is different from 0, so we fit without an intercept term as well:
+
+```{r}
+#| big-bang-noint
+
+ex0725 %>% 
+	{lm(Velocity ~ Distance - 1, .)} %>% 
+	tidy() %>% 
+	knitr::kable()
+```
+
+
