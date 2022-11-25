@@ -9,16 +9,18 @@ output:
     latex_engine: lualatex
     number_sections: false
 mainfont: Gentium Book Basic
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
 	warning = FALSE
 )
 
-pacman::p_load(Sleuth3, tidyverse, ggthemes, broom)
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra)
 ```
 
 
@@ -44,9 +46,28 @@ ex0327 %>%
 	theme_pander()
 ```
 
-<!-- This fit is not a very good one at all. Very little of the actual data is within the 95% confidence band predicted, and the band is very wide for much of the data range. Some sort of transformation or other model is likely to produce a better result. -->
+And a table of the model fit:
+
+```{r}
+ex0327 %>% 
+	lm(PollenRemoved ~ DurationOfVisit, data = .) %>% 
+	tidy() %>% 
+	kbl(booktabs = TRUE, digits = c(NA,4,4,2,4)) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
 
 # 7.25
+
+A plot of the data:
+
+```{r}
+ex0725 %>% 
+	ggplot(aes(x = Distance, y = Velocity)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander() +
+	labs(x = "Distance (megaparsec)", y = "Velocity (km/s)")
+```
 
 Fitting the data to a linear model with an intercept term gives:
 
@@ -54,9 +75,10 @@ Fitting the data to a linear model with an intercept term gives:
 #| big-bang-intercept
 
 ex0725 %>% 
-	{lm(Velocity ~ Distance, .)} %>% 
+	lm(Velocity ~ Distance, data = .) %>% 
 	tidy() %>% 
-	knitr::kable()
+	kbl(booktabs = TRUE, digits = c(0,0,1,2,3)) %>% 
+	kable_styling(latex_options = "HOLD_position")
 ```
 
 This does not give evidence that the intercept is different from 0, so we fit without an intercept term as well:
@@ -64,10 +86,53 @@ This does not give evidence that the intercept is different from 0, so we fit wi
 ```{r}
 #| big-bang-noint
 
-ex0725 %>% 
-	{lm(Velocity ~ Distance - 1, .)} %>% 
+mod <- ex0725 %>% 
+	lm(Velocity ~ Distance - 1, data = .)
+
+mod %>% 
 	tidy() %>% 
-	knitr::kable()
+	kbl(booktabs = TRUE, digits = c(0,0,2,2,3)) %>%
+	kable_styling(latex_options = "HOLD_position")
+
+slope <- mod$coefficients[1] %>% round(2)
+age <- (mod$coefficients[1] * 30856775812799586000 / 31557600000000000) %>% 
+	round()
 ```
 
+Because there is no evidence from these data that the intercept is not equal to zero, and because Hubble's theory predicts that the intercept _should_ be zero, we will use the second model to calculate the age of the universe. This gives us:
 
+\begin{align*}
+Age &= `r slope` \frac{\text{megaparsec}}{\text{km} / \text{sec}}
+\times \frac{3.086 \times 10^{19} \text{km}}{\text{megaparsec}}
+\times \frac{\text{billion years}}{3.156 \times 10^{16} \text{sec}} \\
+&= `r age` \text{ billion years}
+\end{align*}
+
+This is many orders of magnitude greater than the current scientific estimate of around 14 billion years for the age of the universe
+
+# 7.29
+
+A plot of the data:
+
+```{r}
+#| fig.pos = "H"
+
+ex0729 %>% 
+	ggplot(aes(x = Distance, y = OverEstimate)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander() +
+	labs(x = "Distance (ft)", y = "Over-estimate (percentage points)")
+```
+
+And a summary of the model:
+
+```{r}
+ex0729 %>% 
+	lm(OverEstimate ~ Distance, data = .) %>% 
+	tidy() %>% 
+	kbl(booktabs = TRUE, digits = c(NA,3,4,2,5)) %>% 
+	kable_styling(latex_options = "HOLD_position") 
+```
+
+This gives overwhelming evidence that there is a correlation between over-estimation of Kerry votes and distance of the pollsters from the door, lending credence to the theory that Bush voters were more likely to avoid exit polls.
