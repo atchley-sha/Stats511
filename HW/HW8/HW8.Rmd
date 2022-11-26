@@ -1,0 +1,251 @@
+---
+title: "HW #8"
+subtitle: "8.6, 8.12, 8.19, 8.20, 8.25"
+date: "`r Sys.Date()`"
+author: "Hayden Atchley"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    latex_engine: lualatex
+    number_sections: false
+mainfont: Gentium Book Basic
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra)
+```
+
+# 8.6
+
+Using the volume as a group designator in an ANOVA test would only allow interpretation of results between these specific groups, whereas using volume as an explanatory variable in a regression model would allow for interpolation. Since in reality volume is a continuous, ordered scale rather than an unordered categorical designation, it is reasonable to use regression on this data.
+
+# 8.12
+
+If there are no replicate responses, then the means at each input value would be equal to the single response, and there would be 0 degrees of freedom in the seperate-means model.
+
+# 8.19
+
+A plot of the pollen data:
+
+```{r}
+#| fig.pos="H"
+
+queen <- ex0327 %>% 
+	filter(BeeType == "Queen")
+
+queen %>% 
+	ggplot(aes(x = DurationOfVisit, y = PollenRemoved)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander()
+```
+
+It's clear from this plot that there are significant outliers, but to be sure we look at the residual plot:
+
+```{r}
+#| fig.pos="H"
+
+pollen <- queen %>% 
+	lm(PollenRemoved ~ DurationOfVisit, data = .) 
+
+pollen %>% 
+	augment() %>% 
+	ggplot(aes(x = .fitted, y = .resid)) +
+	geom_point() +
+	geom_hline(yintercept = 0) +
+	geom_smooth(se = FALSE) +
+	theme_pander()
+```
+
+This seems an obvious candidate for quadratic regression, and no log transformation of X or Y is likely to help. We fit the model again, removing times greater than 31 seconds:
+
+```{r}
+#| fig.pos="H"
+
+queen %>% 
+	filter(DurationOfVisit < 31) %>% 
+	ggplot(aes(x = DurationOfVisit, y = PollenRemoved)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander()
+```
+
+And the residual plot:
+
+```{r}
+#| fig.pos = "H"
+
+pollen2 <- queen %>% 
+	filter(DurationOfVisit < 31) %>% 
+	lm(PollenRemoved ~ DurationOfVisit, data = .) 
+
+pollen2 %>% 
+	augment() %>% 
+	ggplot(aes(x = .fitted, y = .resid)) +
+	geom_point() +
+	geom_hline(yintercept = 0) +
+	geom_smooth(se = FALSE) +
+	theme_pander()
+```
+
+This fit looks significantly better, though a quadratic regression may still be an even better fit. A summary of the above model:
+
+```{r}
+pollen2 %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,3,4,2,3)) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+# 8.20
+```{r}
+votes <- ex0820 %>% 
+	filter(Disputed == "no") %>% 
+	lm(DemPctOfAbsenteeVotes ~ DemPctOfMachineVotes, data = .)
+
+votes_pred <- votes %>% 
+	augment() %>%
+	full_join(predict(votes, interval = "p") %>%
+							as_tibble(), by = c(".fitted" = "fit"))
+
+disputed <- ex0820 %>% 
+	filter(Disputed == "yes") %>% 
+	select(DemPctOfMachineVotes, DemPctOfAbsenteeVotes)
+
+t_score <- (
+	(79 - 46.9) / 2.79) %>% 
+	round(1)
+
+k <- (22 * 21) / 2
+
+t_pct <- 1 - (0.05/2/k)
+
+t_mult <- qt(t_pct, 19)
+```
+
+## a
+
+```{r}
+#| fig.pos = "H"
+
+ex0820 %>% 
+	ggplot(aes(x = DemPctOfMachineVotes, y = DemPctOfAbsenteeVotes, shape = Disputed)) +
+	geom_point() +
+	geom_smooth(method = 'lm', data = ex0820 %>% filter(Disputed == "no")) +
+	geom_ribbon(
+		aes(
+			x = DemPctOfMachineVotes,
+			ymin = lwr,
+			ymax = upr,
+			color = "95% Prediction\nInterval"),
+		data = votes_pred,
+		inherit.aes = FALSE,
+		fill = NA) +
+	scale_shape_manual(values = c(19, 4)) +
+	scale_color_manual(values = "black") +
+	theme_pander() +
+	labs(
+		x = "Dem % Machine Votes",
+		y = "Dem % Absentee Votes",
+		caption = "NOTE: The fit line and prediction interval on\nthis model use only the non-disputed data points",
+		color = ""
+	)
+```
+
+The disputed election is well outside the 95% prediction interval of this model, though it is worth noting that it is not the only data point outside this range.
+
+Looking at the fit and prediction of the specific disputed election gives us:
+
+```{r}
+prediction <- predict(
+	votes,
+	ex0820 %>% filter(Disputed == "yes"),
+	se.fit = TRUE
+	) %>% 
+	as_tibble() %>% 
+	add_column(disputed, .before = 1)
+
+prediction %>% 
+	kbl(digits = c(1,1,1,2,0,2), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+which gives a _t_-score for the disputed result of $\frac{79.0 - 46.9}{2.79} = `r t_score`$. With `r prediction$df` degrees of freedom, this gives a _p_-value of `r pt(t_score, prediction$df, lower.tail = FALSE) %>% signif(3)`, which is extremely low. But this is a cherry-picked data point, so we use the Bonferroni adjustment ($I = 22$ because there are 22 total residuals in the dataset we could analyze):
+
+\begin{align*}
+k &= \frac{I \times (I - 1)}{2} = \frac{22 \times 21}{2} = `r k` \\
+conf &= 0.95 = 1 - \alpha \implies \alpha = 0.05 \\
+t\text{-multiplier} &= t_{d.f.}(1 - \alpha / 2k) \qquad \text{(Bonferroni)}\\
+&= t_{19}(1 - \frac{0.05}{2 \times `r k`}) = t_{19}(`r t_pct %>% round(6)`) \\
+&= `r t_mult %>% round(2)`
+\end{align*}
+
+We multiply this by the standard error to get a 95% confidence interval half-width of $`r prediction["se.fit"] %>% round(2)` \times `r t_mult %>% round(2)` = `r (prediction["se.fit"] * t_mult) %>% round(2)`$.
+
+
+# 8.25
+
+Because we are testing the results from Palm Beach against the rest, we will run our linear models excluding the data from Palm Beach.
+
+```{r}
+data <- ex0825 %>% 
+	filter(County != "Palm Beach")
+
+model_log <- data %>% 
+	lm(log(Buchanan2000) ~ log(Bush2000), data = .)
+
+pred_log <- model_log %>% 
+	augment() %>% 
+	full_join(predict(model_log, interval = "p") %>% as_tibble(),
+						by = c(".fitted" = "fit"))
+```
+
+Plotting this data subset gives:
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggplot(aes(x = Bush2000, y = Buchanan2000)) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	theme_pander()
+```
+
+The data points spread out as they increase in both x and y, so we plot the data again with both axes logged, and add the data from Palm Beach:
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggplot(aes(x = log(Bush2000), y = log(Buchanan2000))) +
+	geom_point() +
+	geom_smooth(method = 'lm') +
+	geom_point(data = ex0825 %>% filter(County == "Palm Beach"),
+						 shape = 17, size = 3) +
+	geom_text(data = ex0825 %>% filter(County == "Palm Beach"),
+						label = "Palm Beach", nudge_x = -0.5) +
+	geom_ribbon(
+		aes(
+			x = `log(Bush2000)`,
+			ymin = lwr,
+			ymax = upr,
+			color = "95% Prediction\nInterval"),
+		data = pred_log,
+		inherit.aes = FALSE,
+		fill = NA) +
+	scale_color_manual(values = "black") +
+	labs(color = "",
+			 caption = "NOTE: The model excludes Palm Beach data") +
+	theme_pander()
+```
+
+The model's upper 95% prediction value for the log(Bush2000) value that we see in Palm Beach is 7.24. The actual value of the Palm Beach data is 8.13. Because of this (and taking into account the log transformation), if the assumption that excess Buchannan votes were intended to be Gore votes, we can say with 95% confidence that at least $e^{8.13} - e^{7.24} = 2000$ Buchannan votes in Palm Beach were intended to be Gore votes.
