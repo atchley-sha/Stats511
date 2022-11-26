@@ -1,0 +1,192 @@
+---
+title: "HW #9"
+subtitle: "9., 9.4, 9.10, 9.12, 9.16, 9.20"
+date: "`r Sys.Date()`"
+author: "Hayden Atchley"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    latex_engine: lualatex
+    number_sections: false
+mainfont: Gentium Book Basic
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally)
+```
+
+# 9.1
+
+## a
+
+flowers ~ light + time
+
+## b
+
+flowers ~ light + time + light*time
+
+# 9.4
+
+Though the gestation differs, there are other explanatory variables in the model, so a difference in gestation does not necessarily imply the same type of difference in brain weight.
+
+# 9.10
+
+## a
+
+After accounting for all other effects, the estimated mean IQ is 8.3 points higher for those who received breast milk than those who didn't.
+
+## b
+
+The 'Social class' and 'Mother's education' variables are categorical, so the specific numerical values of these variables are not especially meaningful. However, social class and education are somewhat ordered designations in reality, so provided the groups are ordered correctly the coefficient on these variables will give some information about the effect of these variables on the output. The actual coefficient value (the 'slope'), however, is meaningless (unless used as a comparison between models).
+
+## c
+
+Though the actual _p_-value could be orders of magnitude smaller than 0.0001, any of these values provides overwhelming evidence of a relationship. For this study, a reported _p_-value of '<0.0001' is sufficient.
+
+## d
+
+In this study, no babies were breast-fed (they were all fed from a tube), though some were fed with breast milk separately.
+
+## e
+
+The intellectual development of a child is often correlated with the financial situation of the parents (and therefore the ability to provide for quality education), and so social class can have a huge effect on intellectual development. The education of the mother can also play an important role in intellectual development, as the mother can herself be a source of education. There could also be an 'inspiration' effect, where the child is inspired to further their education because their mother also did so.
+
+## f
+
+### i
+
+4.5
+
+### ii
+
+The original model equated any amount of breast milk with exclusively breast milk, when in reality this was a continuous variable. The original coefficient could be said to represent an average increase for anyone who received any breast milk, whereas this continuous variable gives a more precise picture.
+
+# 9.12
+
+```{r}
+data <- case0902 %>% 
+	mutate(across(-Species, log, .names = "log_{.col}"))
+```
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggpairs(
+		columns = str_detect(colnames(.), "log") %>% which(),
+		switch = "y") +
+	theme_pander()
+```
+
+```{r}
+data %>% 
+	lm(log_Brain ~ log_Body + log_Gestation + log_Litter, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 4, 4, 2, 4), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggpairs(
+		columns = which(
+			colnames(.) %in% c("log_Brain", "log_Body", "log_Gestation", "Litter")
+		),
+		switch = "y") +
+	theme_pander()
+```
+
+The fit of `log_Brain ~ Litter` appears _slightly_ better than the fit of `log_Brain ~ log_Litter`, but neither appears to be a very tight fit.
+
+# 9.16
+
+```{r}
+data <- ex0327 %>% 
+	mutate(logit_pollen = log(
+		PollenRemoved / (1 - PollenRemoved)))
+```
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggplot(aes(x = DurationOfVisit, y = PollenRemoved, shape = BeeType)) +
+	geom_point() +
+	scale_shape_manual(values = c(19, 4)) +
+	theme_pander()
+```
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggplot(aes(x = DurationOfVisit, y = logit_pollen, shape = BeeType)) +
+	geom_point() +
+	scale_shape_manual(values = c(19, 4)) +
+	theme_pander()
+```
+
+```{r}
+#| fig.pos = "H"
+
+data %>% 
+	ggplot(aes(x = log(DurationOfVisit), y = logit_pollen, shape = BeeType)) +
+	geom_point() +
+	# geom_smooth(method = 'lm', se = FALSE) +
+	scale_shape_manual(values = c(19, 4)) +
+	theme_pander()
+```
+
+Of these three plots, `logit_pollen ~ log(DurationOfVisit)` seems the most promising for linear regression. We fit this model:
+
+```{r}
+data %>% 
+	lm(logit_pollen ~ log(DurationOfVisit) + BeeType + log(DurationOfVisit)*BeeType, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 2, 3, 2, 4), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+This shows no evidence that the amount of pollen removed depends on the type of bee after accounting for all other variables. We fit without the interaction term:
+
+```{r}
+data %>% 
+	lm(logit_pollen ~ log(DurationOfVisit) + BeeType, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 2, 3, 2, 4), booktabs = TRUE) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+This gives strong evidence that worker bees remove more pollen than queen bees, accounting for duration of visit.
+
+# 9.20
+
+```{r}
+#| fig.pos = "H"
+
+ex0920 %>% 
+	ggplot(aes(x = Year, y = Time)) +
+	geom_point() +
+	geom_smooth(method = 'lm', color = "blue") +
+	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red")
+```
+
+```{r}
+#| fig.pos = "H"
+
+ex0920 %>% 
+	ggplot(aes(x = Year, y = Speed)) +
+	geom_point() +
+	geom_smooth(method = 'lm', color = "blue") +
+	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red")
+```
