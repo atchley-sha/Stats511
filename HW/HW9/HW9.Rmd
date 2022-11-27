@@ -17,10 +17,14 @@ editor_options:
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
-	warning = FALSE
+	warning = FALSE,
+	fig.pos = "H"
 )
 
-pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally)
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally, default)
+
+default(kbl) <- list(booktabs = TRUE, linesep = "")
+default(kable_styling) <- list(latex_options = "HOLD_position")
 ```
 
 # 9.1
@@ -77,8 +81,6 @@ data <- case0902 %>%
 ```
 
 ```{r}
-#| fig.pos = "H"
-
 data %>% 
 	ggpairs(
 		columns = str_detect(colnames(.), "log") %>% which(),
@@ -95,8 +97,6 @@ data %>%
 ```
 
 ```{r}
-#| fig.pos = "H"
-
 data %>% 
 	ggpairs(
 		columns = which(
@@ -117,7 +117,7 @@ data <- ex0327 %>%
 ```
 
 ```{r}
-#| fig.pos = "H"
+#| fig.height = 3
 
 data %>% 
 	ggplot(aes(x = DurationOfVisit, y = PollenRemoved, shape = BeeType)) +
@@ -127,7 +127,7 @@ data %>%
 ```
 
 ```{r}
-#| fig.pos = "H"
+#| fig.height = 3
 
 data %>% 
 	ggplot(aes(x = DurationOfVisit, y = logit_pollen, shape = BeeType)) +
@@ -137,7 +137,7 @@ data %>%
 ```
 
 ```{r}
-#| fig.pos = "H"
+#| fig.height = 3
 
 data %>% 
 	ggplot(aes(x = log(DurationOfVisit), y = logit_pollen, shape = BeeType)) +
@@ -172,21 +172,99 @@ This gives strong evidence that worker bees remove more pollen than queen bees, 
 # 9.20
 
 ```{r}
-#| fig.pos = "H"
+#| fig.height = 3
 
 ex0920 %>% 
 	ggplot(aes(x = Year, y = Time)) +
 	geom_point() +
 	geom_smooth(method = 'lm', color = "blue") +
-	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red")
+	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red") +
+	theme_pander()
 ```
 
 ```{r}
-#| fig.pos = "H"
+#| fig.height = 3
 
 ex0920 %>% 
 	ggplot(aes(x = Year, y = Speed)) +
 	geom_point() +
 	geom_smooth(method = 'lm', color = "blue") +
-	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red")
+	geom_smooth(method = 'lm', formula = y ~ poly(x,2), color = "red") +
+	theme_pander()
 ```
+
+Using either speed or time, a quadratic regression is significantly better than a linear one. However, both models at a glance appear to have about equal fit. A summary of both models:
+
+```{r}
+speedmod <- ex0920 %>% 
+	lm(Speed ~ poly(Year, 2), data = .)
+
+timemod <- ex0920 %>% 
+	lm(Time ~ poly(Year, 2), data = .)
+```
+
+```{r}
+speedmod %>% 
+	tidy() %>% 
+	cbind(tidy(timemod)) %>% 
+	as_tibble(.name_repair = "minimal") %>% 
+	{.[-6]} %>% 
+	kbl(booktabs = TRUE, digits = c(NA,2,3,1,7,1,2,1,7)) %>% 
+	add_header_above(c("", "Speed Model" = 4, "Time Model" = 4)) %>% 
+	kable_styling(latex_options = "HOLD_position")
+```
+
+Both models fit exactly as well as each other (even the standard errors of the `Year` terms are reciprocals). I will use the `Speed` model going forward.
+
+Adding the track conditions to the model:
+
+```{r}
+condmod <- ex0920 %>% 
+	lm(Speed ~ poly(Year, 2) + Conditions, data = .)
+```
+
+```{r}
+ex0920 %>% 
+	mutate(speed_pred = predict(condmod)) %>% 
+	ggplot(aes(x = Year, y = Speed, shape = Conditions)) +
+	geom_smooth(aes(y = speed_pred, color = Conditions)) +
+	geom_point() +
+	scale_shape_manual(values = c(19, 4)) +
+	scale_color_viridis_d() +
+	theme_pander()
+```
+
+```{r}
+condmod %>%
+	tidy() %>% 
+	kbl(digits = c(NA, 2, 3, 2, 12)) %>% 
+	kable_styling()
+```
+
+Based on this model, winning track speeds are on average about 1 mph faster in fast conditions than slow conditions.
+
+Adding the number of horses in the race to the model:
+
+```{r}
+horsemod <- ex0920 %>% 
+	lm(Speed ~ poly(Year, 2) + Conditions + Starters, data = .)
+```
+
+```{r}
+horsemod %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 2, 3, 2, 3)) %>% 
+	kable_styling()
+```
+
+This shows pretty good evidence of the number of horses having a slight effect on the winning speed. With an interaction term:
+
+```{r}
+ex0920 %>% 
+	lm(Speed ~ poly(Year, 2) + Conditions + Starters + Starters*Conditions, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 2, 3, 2, 3)) %>% 
+	kable_styling()
+```
+
+This shows no evidence of an interaction between number of horses and track conditions, i.e. that the affect of the number of horses is different depending on the track conditions.
