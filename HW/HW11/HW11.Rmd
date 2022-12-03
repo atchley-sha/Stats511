@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 	fig.pos = "H"
 )
 
-pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally, default)
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally, default, patchwork)
 
 options(knitr.kable.NA = '')
 
@@ -31,15 +31,78 @@ default(kable_styling) <- list(latex_options = "HOLD_position")
 
 # 11.2
 
+## a
+The models have different parameters (neither is a subset of the other), so can't be compared with the "full vs reduced" methods.
 
+## b
+
+(i) $\beta_2$
+
+(ii) $\beta_2 \times gast$
 
 # 11.7
 
-
+Since the offending observation is well outside the range of the rest of the data in terms of explanatory variable(s), it should be removed, noting that the model only fits in the new range of the data.
 
 # 11.18
 
+```{r}
+blood <- case1102 %>% 
+	mutate(Response = Brain / Liver,
+				 Time = as.factor(Time)) %>% 
+	lm(Response ~ Time + Treatment + Days + Sex + Weight + Loss + Tumor, data = .)
+```
 
+```{r}
+blood %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 3, 3, 3, 3)) %>% 
+	kable_styling()
+```
+
+```{r}
+fit <- case1102 %>% 
+	mutate(
+	case = 1:nrow(.),
+	cooks = cooks.distance(blood),
+	leverage = hatvalues(blood),
+	students = rstudent(blood)
+)
+```
+
+## a
+
+```{r}
+#| fig.height = 7
+
+cooks <- fit %>% 
+	ggplot(aes(x = case, y = cooks)) +
+	geom_point() +
+	geom_hline(yintercept = 1, lty = "dashed") +
+	expand_limits(y = c(0,1)) +
+	theme_bw() +
+	theme(axis.title.x = element_blank())
+
+lev <- fit %>% 
+	ggplot(aes(x = case, y = leverage)) +
+	geom_point() +
+	expand_limits(y = c(0,1)) +
+	theme_bw() +
+	theme(axis.title.x = element_blank())
+
+stud <- fit %>% 
+	ggplot(aes(x = case, y = students)) +
+	geom_point() +
+	geom_hline(yintercept = c(2, -2), lty = "dashed") +
+	expand_limits(y = c(-2,2)) +
+	theme_bw()
+
+cooks / lev / stud
+```
+
+## b
+
+There are significant outliers as can be seen in the student's residual plot, but none of these values have particularly high leverage, so Cook's Distance shows only mild problems.
 
 # 11.20
 
