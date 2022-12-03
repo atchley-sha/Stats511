@@ -55,7 +55,7 @@ f %>%
 	kable_styling()
 ```
 
-The _F_-statistic is therefore $\frac{`r f[1,5] %>% round(2)` / `r f[1,6]`}{`r f[1,4] %>% round(3)`} = `r f_stat %>% round(2)$, and $P(F_{2,32} > `r f_stat %>% round(2)`) = `r p_val %>% round(3)`$. This gives evidence that the slopes are different for the different species.
+The _F_-statistic is therefore $\frac{`r f[1,5] %>% round(2)` / `r f[1,6]`}{`r f[1,4] %>% round(3)`} = `r f_stat %>% round(2)`$, and $P(F_{2,32} > `r f_stat %>% round(2)`) = `r p_val %>% round(3)`$. This gives evidence that the slopes are different for the different species.
 
 # 10.13
 
@@ -110,4 +110,129 @@ The test that the intercepts for ebat and birds are the same is given from the t
 
 # 10.19
 
+```{r}
+reduced <- case0901 %>% 
+	lm(Flowers ~ ., data = .)
+
+full <- case0901 %>% 
+	mutate(Intensity = as.factor(Intensity)) %>% 
+	lm(Flowers ~ .^2, data = .)
+```
+
+## a
+
+```{r}
+reduced %>% 
+	aov() %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 0, 1, 1, 1, 4)) %>% 
+	kable_styling()
+```
+
+## b
+
+```{r}
+full %>% 
+	aov() %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 0, 1, 1, 1, 4)) %>% 
+	kable_styling()
+```
+
+## c
+
+```{r}
+anova(full, reduced) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA, 0, 1, 0, 1, 3, 3)) %>% 
+	kable_styling()
+```
+
+# 10.28
+
+We start by analyzing the models with all potential explanatory variables (El Nino, West African wetness and Year):
+
+```{r}
+storm_full <- ex1028 %>% 
+	lm(Storms ~ ElNino + WestAfrica + Year, data = .)
+
+hurr_full <- ex1028 %>% 
+	lm(Hurricanes ~ ElNino + WestAfrica + Year, data = .)
+
+SI_full <- ex1028 %>% 
+	lm(StormIndex ~ ElNino + WestAfrica + Year, data = .)
+
+storm_red <- ex1028 %>% 
+	lm(Storms ~ ElNino + WestAfrica, data = .)
+
+hurr_red <- ex1028 %>% 
+	lm(Hurricanes ~ ElNino + WestAfrica, data = .)
+
+SI_red <- ex1028 %>% 
+	lm(StormIndex ~ ElNino + WestAfrica, data = .)
+```
+
+```{r}
+storm_full %>% 
+	tidy() %>% 
+	kbl(digits = 3, caption = "Effect on Storms") %>% 
+	kable_styling()
+
+hurr_full %>% 
+	tidy() %>% 
+	kbl(digits = 3, caption = "Effect on Hurricanes") %>%
+	kable_styling()
+
+SI_full %>% 
+	tidy() %>% 
+	kbl(digits = 3, caption = "Effect on Storm Index") %>% 
+	kable_styling()
+```
+
+We remove the `Year` variable from the latter two models as it is not at all shown to be different from 0:
+
+```{r}
+hurr_red %>% 
+	tidy() %>% 
+	kbl(digits = 3, caption = "Effect on Hurricanes") %>%
+	kable_styling()
+
+SI_red %>% 
+	tidy() %>% 
+	kbl(digits = 3, caption = "Effect on Storm Index") %>% 
+	kable_styling()
+```
+
+# 10.32
+
+```{r}
+height <- ex0726 %>% 
+	lm(Height ~ Gender + Father + Mother, data = .)
+```
+
+```{r}
+height %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,2,11)) %>% 
+	kable_styling()
+```
+
+## a
+
+$h_c = 16.43 + 0.39h_f + 0.32h_m + 5.22(?\text{male})$
+
+## b
+
+5.22 inches
+
+## c
+
+```{r}
+height %>% 
+	predict(tibble(Father = 72, Mother = 64, Gender = "female"),
+					interval = "prediction") %>% 
+	bind_cols() %>% 
+	kbl(digits = 1) %>% 
+	kable_styling()
+```
 
