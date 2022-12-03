@@ -1,0 +1,49 @@
+---
+title: "HW #12"
+subtitle: "12.4, 12.7, 12.17, 12.18, 12.22"
+date: "`r Sys.Date()`"
+author: "Hayden Atchley"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    latex_engine: lualatex
+    number_sections: false
+mainfont: Gentium Book Basic
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	fig.pos = "H"
+)
+
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, GGally, default)
+
+options(knitr.kable.NA = '')
+
+default(kbl) <- list(booktabs = TRUE, linesep = "")
+default(kable_styling) <- list(latex_options = "HOLD_position")
+```
+
+# 12.4
+
+
+
+# 12.7
+
+
+
+# 12.17
+
+
+
+# 12.18
+
+
+
+# 12.22
+
