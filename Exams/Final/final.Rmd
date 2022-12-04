@@ -1,0 +1,84 @@
+---
+title: "Final Exam"
+subtitle: "Take Home Portion"
+date: "`r Sys.Date()`"
+author: "Hayden Atchley"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    latex_engine: lualatex
+    number_sections: false
+mainfont: Gentium Book Basic
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	fig.pos = "H"
+)
+
+pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, olsrr, default)
+
+options(knitr.kable.NA = '')
+
+default(kbl) <- list(booktabs = TRUE, linesep = "")
+default(kable_styling) <- list(latex_options = "hold_position")
+```
+
+# 1
+
+```{r}
+#| strength
+
+strength <- readxl::read_xlsx("Exams/Final/data/2022 F Final Problem 1.xlsx")
+
+full_model <- lm(
+	Strength ~ .^2 + I(Force^2) + I(Power^2) + I(Temp^2) + I(Minutes^2), data = strength)
+```
+
+The full model using all the second-order term is given in Table \@ref(tab:strength-raw). Many of the _p_-values are not significant, so we look at all possible models and choose the one with the best C(p). The resulting model is given in Table \@ref(tab:strength-final).
+
+```{r}
+#| strength-raw
+
+full_model %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,2,3,3), caption = "Strength Second-Order Model") %>% 
+	kable_styling()
+```
+
+```{r}
+#| strength-final
+
+str_models <- full_model %>% 
+	ols_step_both_p()
+
+final_model <- str_models$model
+
+final_model %>% 
+	tidy() %>% 
+	kbl(caption = "Final Strength Model", digits = 3) %>% 
+	kable_styling()
+```
+
+Based on this model, we can predict the highest strength using inputs from our data. Table \@ref{tab:predict-strength} gives the first few rows of the input data sorted by highest predicted strength. The first row of the table gives the approximate values of the predictors that will give the highest strength, along with the predicted highest strength.
+
+```{r}
+#| predict-strength
+
+strength %>% 
+	mutate(PredictStrength = predict(final_model, .)) %>% 
+	arrange(desc(PredictStrength)) %>% 
+	head() %>% 
+	kbl(digits = 0) %>% 
+	kable_styling()
+```
+
+
+# 2
+
+
