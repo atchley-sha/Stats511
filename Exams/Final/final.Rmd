@@ -26,7 +26,7 @@ pacman::p_load(Sleuth3, tidyverse, ggthemes, broom, kableExtra, olsrr, default)
 options(knitr.kable.NA = '')
 
 default(kbl) <- list(booktabs = TRUE, linesep = "")
-default(kable_styling) <- list(latex_options = "hold_position")
+default(kable_styling) <- list(latex_options = "HOLD_position")
 ```
 
 # 1
@@ -40,7 +40,7 @@ full_model <- lm(
 	Strength ~ .^2 + I(Force^2) + I(Power^2) + I(Temp^2) + I(Minutes^2), data = strength)
 ```
 
-The full model using all the second-order term is given in Table \@ref(tab:strength-raw). Many of the _p_-values are not significant, so we look at all possible models and choose the one with the best C(p). The resulting model is given in Table \@ref(tab:strength-final).
+The full model using all the second-order term is given in Table \@ref(tab:strength-raw). Many of the _p_-values are not significant, so we use a stepwise function to choose the one with the best (lowest) C(p). The resulting model is given in Table \@ref(tab:strength-final).
 
 ```{r}
 #| strength-raw
@@ -65,7 +65,7 @@ final_model %>%
 	kable_styling()
 ```
 
-Based on this model, we can predict the highest strength using inputs from our data. Table \@ref{tab:predict-strength} gives the first few rows of the input data sorted by highest predicted strength. The first row of the table gives the approximate values of the predictors that will give the highest strength, along with the predicted highest strength.
+Based on this model, we can predict the highest strength using inputs from our data. Table \@ref(tab:predict-strength) gives the first few rows of the input data sorted by highest predicted strength. The first row of the table gives the approximate values of the predictors that will give the highest strength, along with the predicted highest strength.
 
 ```{r}
 #| predict-strength
@@ -74,11 +74,173 @@ strength %>%
 	mutate(PredictStrength = predict(final_model, .)) %>% 
 	arrange(desc(PredictStrength)) %>% 
 	head() %>% 
-	kbl(digits = 0) %>% 
+	kbl(digits = 0, caption = "Highest Strength Predictions") %>% 
 	kable_styling()
 ```
 
 
 # 2
 
+```{r}
+water <- readxl::read_xlsx("Exams/Final/data/2022 F Final Problem 2.xlsx")
+```
 
+We start with `NO3` as the response variable. We are interested in the effects of density after adjusting for the other demographic variables, so we use these in a regression model. The model is given in Table \@ref(tab:water-N). From this table we can see that the NO3 is correlated with density after adjusting for the other factors, with a highly significant _p_-value.
+
+```{r}
+#| water-N
+
+water_n <- water %>% 
+	lm(NO3 ~ . - RIVER - COUNTRY - EXPORT, data = .)
+
+water_n %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,3,2,3,4), caption = "NO3 Model") %>% 
+	kable_styling()
+```
+
+Now we look at `EXPORT` as the response variable (Table \@ref(tab:water-E)). Again, we see that density is correlated, with a small _p_-value. We can conclude that both `NO3` and `EXPORT` are significantly correlated for density after adjusting for the remaining demographic variables.
+
+```{r}
+#| water-E
+
+water_e <- water %>% 
+	lm(EXPORT ~ . - RIVER - COUNTRY - NO3, data = .)
+
+water_e %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,3,2,3,4), caption = "EXPORT Model") %>% 
+	kable_styling()
+```
+
+# 3
+
+```{r}
+q3 <- readxl::read_xlsx("Exams/Final/data/2022 F Final Problem 3.xlsx")
+```
+
+## a
+
+```{r}
+q3 %>% 
+	lm(Y ~ X, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,2,17)) %>% 
+	kable_styling()
+```
+
+$Y = -44.62 + 1.54X$
+
+## b
+
+```{r}
+q3 %>% 
+	lm(Y ~ X + I(X^2), data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,2,14)) %>% 
+	kable_styling()
+```
+
+$Y = -249.94 + 7.6X - 0.04X^2$
+
+## c
+
+```{r}
+q3 %>% 
+	lm(Y ~ X + Gender, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,2,4)) %>% 
+	kable_styling()
+```
+
+$Y = -39.31 + 1.44X + 2.64(?\text{Male})$
+
+The difference in intercepts is not statistically significant.
+
+## d
+
+```{r}
+q3 %>% 
+	lm(Y ~ X*Gender, data = .) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,2,20)) %>% 
+	kable_styling()
+```
+
+$Y = -116.64 + 2.74X + (156.44 - 2.26X)(?\text{Male})$
+
+## e
+
+For females the slope is 2.74 and the intercept is -116.64. For males the slope is $2.74 - 2.26 = 0.48$ and the intercept is $-116.64 + 156.44 = 39.80$.
+
+# 4
+
+```{r}
+octane <- readxl::read_xlsx("Exams/Final/data/2022 F Final Problem 4.xlsx")
+```
+
+```{r}
+data <- octane %>% 
+	mutate(Group = case_when(
+		Region %in% c("Region A", "Region B") ~ "AB",
+		Region %in% c("Region C", "Region D") ~ "CD"))
+```
+
+Model (a), with constant octane for all 4 regions:
+
+```{r}
+a <- data %>% 
+	lm(Octane ~ 1, data = .) 
+
+a %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,0,4)) %>% 
+	kable_styling()
+```
+
+Model (b), with two groups (A/B and C/D):
+
+```{r}
+b <- data %>% 
+	lm(Octane ~ Group, data = .)
+
+b %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,2,3,3,4)) %>% 
+	kable_styling()
+```
+
+And model (c), with each region in its own group:
+
+```{r}
+c <- data %>% 
+	lm(Octane ~ Region, data = .)
+
+c %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,3,3,3,4)) %>% 
+	kable_styling()
+```
+
+Comparing these models using an extra sum of squares _F_-test gives:
+
+```{r}
+anova(a,b,c) %>% 
+	tidy() %>% 
+	kbl(digits = c(NA,0,1,0,2,3,4)) %>% 
+	kable_styling()
+```
+
+Based on these results, model (c) is preferable, as there is a significant difference between this and the other two models.
+
+# 5
+
+- (T/**F**) The coefficient of a term in a linear regression model will stay the same independent of the other terms in the model.
+
+- A(n) _______ **(interaction)** term indicates how much the correlation of one explanatory variable to the response changes based on another explanatory variable.
+
+- The equation $Y = \beta_0 + \beta_1X + \beta_2(X*Z)$ is interpreted graphically as follows:
+	a. A single line
+	b. Two parallel lines
+	c. **Two lines with the same intercept but different slopes**
+	d. Two lines with different intercepts and slopes
